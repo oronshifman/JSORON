@@ -1,0 +1,60 @@
+define pObj
+    set $key_iter = $arg0.insertion_order.begin()
+    while $key_iter != $arg0.insertion_order.end()
+        pVal $arg0.json.find($key_iter)
+        ++((std::list<std::string>::iterator)$key_iter)
+    end
+end
+
+define pTok
+    print $arg0.type
+    
+    if $arg0.type == JSORON::JSONParser::TokenType::STR
+        print $arg0.str_tok
+    end
+    
+    if $arg0.type == JSORON::JSONParser::TokenType::PUNCTUATION
+        print $arg0.punc_tok
+    end
+
+    if $arg0.type == JSORON::JSONParser::TokenType::INT
+        print $arg0.int_tok
+    end
+
+    if $arg0.type == JSORON::JSONParser::TokenType::DOUBLE
+        print $arg0.double_tok
+    end 
+end    
+    
+
+define pVal
+    print $arg0.type
+    
+    if $arg0.type == JSORON::JSONObject::ValueType::STR
+        print $arg0.str_val
+    end
+    
+    if $arg0.type == JSORON::JSONObject::ValueType::KEY
+        print $arg0.str_val
+    end
+
+    if $arg0.type == JSORON::JSONObject::ValueType::INT
+        print $arg0.int_val
+    end
+
+    if $arg0.type == JSORON::JSONObject::ValueType::DOUBLE
+        print $arg0.double_val
+    end
+    
+    if $arg0.type == JSORON::JSONObject::ValueType::JSON_OBJECT
+        pObj $arg0.json_val
+    end
+    
+    if $arg0.type == JSORON::JSONObject::ValueType::ARR
+        set $i = 0
+        while $i < $arg0.json_arr.Size()
+            pVal $arg0.json_arr.At($i)
+            ++i
+        end
+    end
+end

@@ -1,0 +1,11 @@
+# Ignore all
+*
+
+# Exclude these files:
+!/**/
+!src/*.cpp
+!test/*.cpp
+!**/*.h
+!**/*.md
+!.gitignore
+!Makefile
