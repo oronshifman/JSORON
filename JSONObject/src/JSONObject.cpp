@@ -27,10 +27,6 @@ JSONObject::JSONArray& JSONObject::JSONArray::operator=(const JSONObject::JSONAr
 
 JSONObject::JSONArray::~JSONArray()
 {
-    for (JSONValue *val : array)
-    {
-        delete val;
-    }
     array.clear();
 }
 
@@ -39,14 +35,14 @@ JSONObject::JSONValue JSONObject::JSONArray::Erase(u64 index)
     assert(index < array.size());
 
     auto iter = array.erase(std::next(array.begin(), index));
-    return **iter;
+    return *iter;
 }
 
-JSONObject::JSONValue& JSONObject::JSONArray::At(u64 index) const
+JSONObject::JSONValue JSONObject::JSONArray::At(u64 index) const
 {
     assert(index < array.size());
     
-    return *(array[index]);
+    return array[index];
 }
 
 u64 JSONObject::JSONArray::Size() const
@@ -54,14 +50,14 @@ u64 JSONObject::JSONArray::Size() const
     return array.size();
 }
 
-std::vector<JSONObject::JSONValue*>::iterator JSONObject::JSONArray::begin()
+std::vector<JSONObject::JSONValue>::iterator JSONObject::JSONArray::begin()
 {
     return array.begin();
 }
 
-std::vector<JSONObject::JSONValue*>::iterator JSONObject::JSONArray::end()
+std::vector<JSONObject::JSONValue>::iterator JSONObject::JSONArray::end()
 {
-    return array.end();
+    return array.begin();
 }
 
 JSONObject::JSONValue JSONObject::bad_value(JSONObject::ValueType::BAD_TYPE);
@@ -104,7 +100,7 @@ JSONObject::JSONValue::operator int() const
     }
 }
 
-JSONObject::JSONValue::operator float() const
+JSONObject::JSONValue::operator double() const
 {
     if (type == JSONObject::ValueType::DOUBLE)
     {
@@ -174,28 +170,12 @@ JSONObject::JSONValue JSONObject::JSONValue::operator[](u64 index)
 
 JSONObject::JSONValue JSONObject::JSONValue::operator[](std::string key)
 {
-    const JSONValue val = static_cast<const JSONValue&>(*this)[key];
-    return const_cast<JSONValue&>(val);
-}
-
-const JSONObject::JSONValue JSONObject::JSONValue::operator[](std::string key) const
-{
     if (type == JSONObject::ValueType::JSON_OBJECT)
     {
         return (*json_val)[key];
     }
 
     return JSONObject::bad_value;
-}
-
-JSONObject::JSONValue JSONObject::JSONValue::operator[](const char* key)
-{
-    return (*this)[std::string(key)];
-}
-
-const JSONObject::JSONValue JSONObject::JSONValue::operator[](const char* key) const
-{
-    return (*this)[std::string(key)];
 }
 
 void JSONObject::JSONValue::PrintValueByType(u8 indent, std::ostream& out) const
@@ -374,13 +354,7 @@ void JSONObject::Remove(std::string key)
 
 JSONObject::JSONValue& JSONObject::operator[](std::string key)
 {
-    return const_cast<JSONValue&>(static_cast<const JSONObject&>(*this)[key]);
-}
-
-const JSONObject::JSONValue& JSONObject::operator[](std::string key) const
-{
-    
-    auto value = json.find(key);
+    JSONIter value = json.find(key);
     if (value == json.end())
     {
         return bad_value;
@@ -422,12 +396,6 @@ bool operator==(const JSONObject& lhs, const JSONObject& rhs)
         return 1;
     }
     
-    if (lhs.json.size() != rhs.json.size() ||
-        lhs.insertion_order.size() != rhs.insertion_order.size())
-    {
-        return 0;
-    }
-
     for (auto lhs_iter = lhs.insertion_order.begin(), rhs_iter = rhs.insertion_order.begin();
          lhs_iter != lhs.insertion_order.end() && rhs_iter != rhs.insertion_order.end();
          ++lhs_iter, ++rhs_iter)

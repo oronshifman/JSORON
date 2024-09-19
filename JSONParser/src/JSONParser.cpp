@@ -12,7 +12,6 @@
 #include "JSONParser.h"
 #include "JSONObject.h"
 #include "my_int.h"
-#include "profiler.h"
 
 namespace JSORON
 {
@@ -83,196 +82,28 @@ namespace JSORON
         }
     }
     
-#ifdef PROFILING
-    void JSONParser::InitProfilingData(parser_profiling_data* new_pd)
-    {
-        pd = new_pd;
-    }
-#endif /* PROFILING */
+    const JSONObject JSONParser::bad_obj = JSONObject();
     
     JSONObject JSONParser::Parse(std::ifstream& json_file)
     {
-        u64 file_size = 0;
-	    json_file.seekg(0, std::ios_base::end);
-	    file_size = json_file.tellg();
-	    json_file.seekg(0);
-
-	    std::string json_str(file_size, ' ');
-        
-        json_file.read(&json_str[0], file_size);
-	    if (json_file.fail())
+        // TODO(7.8.24): impl
+        std::string json_str;
+        for (std::string line; std::getline(json_file, line);) 
         {
-            return bad_obj;
+            json_str += line;
         }
 
-        return Parse(json_str);
+        Parse(json_str);
+
+        return bad_obj;
     }
     
     JSONObject JSONParser::Parse(const std::string& json_str)
     {
         Lex(json_str);
-        
-        JSONValue parsed = _Parse();
-        if (parsed == JSONObject::bad_value)
-        {
-            return bad_obj;
-        }
-
-        return *(parsed.json_val);
+        return *(_Parse().json_val);
     }
 
-#ifdef PROFILING
-    JSONObject& JSONParser::ProfiledParse(std::ifstream& json_file)
-    {
-        u64 file_size = 0;
-	    json_file.seekg(0, std::ios_base::end);
-	    file_size = json_file.tellg();
-	    json_file.seekg(0);
-
-	    std::string json_str(file_size, ' ');
-        
-        json_file.read(&json_str[0], file_size);
-	    if (json_file.fail())
-        {
-            return bad_obj;
-        }
-
-        return ProfiledParse(json_str);
-    }
-
-    JSONObject& JSONParser::ProfiledParse(const std::string& json_str)
-    {
-        pd->lexing = profiler::StartCPU();
-        Lex(json_str);
-        pd->lexing = profiler::EndCPU(pd->lexing);
-        
-        pd->parsing = profiler::StartCPU();
-        JSONValue parsed = _Parse();
-        pd->parsing = profiler::EndCPU(pd->parsing);
-
-        if (parsed == JSONObject::bad_value)
-        {
-            return bad_obj;
-        }
-
-        return *(parsed.json_val);
-    }
-#endif /* PROFILING */
-
-// #ifdef PROFILING
-    JSONObject::JSONValue& JSONParser::_Parse()
-    {
-        Token curr_tok = tokens.front();
-        tokens.erase(tokens.begin());
-
-        if (curr_tok.type == TokenType::PUNCTUATION)
-        {
-            if (curr_tok.punc_tok == '{')
-            {
-                return ParseObj();
-            }
-            else if (curr_tok.punc_tok == '[')
-            {
-                return ParseArray();
-            }
-            else 
-            {
-                JSONValue *null_value = new JSONValue();
-                return *null_value;
-            }
-        }
-
-        switch (curr_tok.type)
-        {
-            case TokenType::DOUBLE:
-            {
-                JSONValue *double_val = new JSONValue(curr_tok.double_tok);
-                return *double_val;
-            } break;
-
-            case TokenType::INT:
-            {
-                JSONValue *int_val = new JSONValue(curr_tok.int_tok);
-                return *int_val;
-            } break;
-
-            case TokenType::STR:
-            {
-                if (tokens.front().type == TokenType::PUNCTUATION &&
-                    tokens.front().punc_tok == ':')
-                {
-                    u64 start = profiler::StartCPU();
-                    tokens.erase(tokens.begin());
-                    pd->erasing += profiler::EndCPU(start);
-
-                    start = profiler::StartCPU();
-                    JSONValue *result = new JSONValue(JSONObject::ValueType::KEY, curr_tok.str_tok);
-                    pd->create_keys += profiler::EndCPU(start);
-                    return *result;
-                }
-                else
-                {
-                    JSONValue *result = new JSONValue(curr_tok.str_tok);
-                    return *result;
-                }
-            } break;
-        }
-
-        return JSONObject::bad_value;
-    }
-
-    JSONObject::JSONValue& JSONParser::ParseObj()
-    {
-        JSONObject *obj = new JSONObject();
-        
-        Token curr_tok = tokens.front();
-        while (!IsEndOfObj(curr_tok))
-        {
-            JSONValue key = _Parse(); // TODO(15.09.24): continue moving everything to pointers and references to reduce copying
-            if (key.type == JSONObject::ValueType::KEY)
-            {
-                JSONValue val = _Parse();
-                if (val.type == JSONObject::ValueType::NULL_TYPE)
-                {
-                    delete val;
-                    std::cerr << "Invalid value for key " << key.str_val << "\n";
-                    break;
-                }
-                if (val.type == JSONObject::ValueType::BAD_TYPE)
-                {
-                    std::cerr << "Invalid value for key " << key.str_val << "\n";
-                    break;
-                }
-                obj->Put(key.str_val, val); 
-            }
-            curr_tok = tokens.front();
-        }
-
-        JSONValue *result = new JSONValue(obj);
-        return *result;
-    }
-    
-    JSONObject::JSONValue& JSONParser::ParseArray()
-    {
-        JSONArray arr;
-
-        Token curr_tok = tokens.front();
-        while (!IsEndOfArr(curr_tok))
-        {
-            JSONValue val = _Parse();
-            // NOTE(20.08.24): val might be NULL_TYPE. figure out what are the cases this could happen
-            if (val.type != JSONObject::ValueType::NULL_TYPE)
-            {
-                arr.PushBack(val);
-            }
-        
-            curr_tok = tokens.front();
-        }
-
-        return JSONValue(arr);
-    }
-// #else
-#ifdef TEMP
     JSONObject::JSONValue JSONParser::_Parse()
     {
         Token curr_tok = tokens.front();
@@ -349,6 +180,17 @@ namespace JSORON
         return JSONValue(obj);
     }
 
+    b8 JSONParser::IsEndOfObj(const Token& tok)
+    {
+        if (tok.type == TokenType::PUNCTUATION &&
+            tok.punc_tok == '}')
+        {
+            return 1;
+        }
+
+        return 0;
+    }
+
     JSONObject::JSONValue JSONParser::ParseArray()
     {
         JSONArray arr;
@@ -368,19 +210,7 @@ namespace JSORON
 
         return JSONValue(arr);
     }
-#endif /* PROFILING */
-
-    b8 JSONParser::IsEndOfObj(const Token& tok)
-    {
-        if (tok.type == TokenType::PUNCTUATION &&
-            tok.punc_tok == '}')
-        {
-            return 1;
-        }
-
-        return 0;
-    }
-
+    
     b8 JSONParser::IsEndOfArr(const Token& tok)
     {
         if (tok.type == TokenType::PUNCTUATION &&
@@ -531,7 +361,7 @@ namespace JSORON
 
         if (is_float)
         {
-            f32 new_float = std::stof(num);
+            f64 new_float = std::stod(num);
             new_float *= sign;
             tokens.push_back(Token(new_float));
         }

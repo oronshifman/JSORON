@@ -56,15 +56,15 @@ namespace JSORON
             void PushBack(const T& value);
 
             JSONValue Erase(u64 index);
-            JSONValue& At(u64 index) const;
+            JSONValue At(u64 index) const;
 
-            std::vector<JSONValue*>::iterator begin();
-            std::vector<JSONValue*>::iterator end();
+            std::vector<JSONValue>::iterator begin();
+            std::vector<JSONValue>::iterator end();
 
             friend bool operator==(const JSONArray& lhs, const JSONArray& rhs);
             friend bool operator!=(const JSONArray& lhs, const JSONArray& rhs);
         private:
-            std::vector<JSONValue*> array;
+            std::vector<JSONValue> array;
         };
         
         class JSONValue 
@@ -75,7 +75,7 @@ namespace JSORON
             union
             {
                 s32 int_val;
-                f32 double_val;
+                f64 double_val;
                 std::string str_val;
                 JSONObject *json_val;
     
@@ -95,7 +95,7 @@ namespace JSORON
     
             JSONValue(const ValueType type, const std::string key) : type(type), str_val(key) {}
             JSONValue(const s32 value) : type(ValueType::INT), int_val(value) {}
-            JSONValue(const f32 value) : type(ValueType::DOUBLE), double_val(value) {}
+            JSONValue(const f64 value) : type(ValueType::DOUBLE), double_val(value) {}
             JSONValue(const std::string value) : type(ValueType::STR), str_val(value) {}
             JSONValue(const JSONObject *value);
             JSONValue(const JSONObject &value);
@@ -112,7 +112,7 @@ namespace JSORON
              * @brief overloading cast to double.
              * @throw bad_cast
              */
-            operator float() const;
+            operator double() const;
            
             /**
              * @brief overloading cast to string.
@@ -140,24 +140,6 @@ namespace JSORON
              */
             JSONValue operator[](std::string key);
 
-            /**
-             * @brief for accessing keys from a nested json
-             * @return JSONValue with the nested JSONObject
-             */
-            JSONValue operator[](const char* key);
-
-            /**
-             * @brief for accessing keys from a nested json
-             * @return JSONValue with the nested JSONObject
-             */
-            const JSONValue operator[](std::string key) const;
-
-            /**
-             * @brief for accessing keys from a nested json
-             * @return JSONValue with the nested JSONObject
-             */
-            const JSONValue operator[](const char* key) const;
-
             void PrintValueByType(u8 indent, std::ostream& out) const;
             void AssignValueByType(const JSONValue& src);
     
@@ -176,9 +158,6 @@ namespace JSORON
     
         template<typename T>
         void Put(const std::string key, const T& value);
-
-        template<typename T>
-        void Put(JSONValue* value);
     
         /**
          * @brief adds a new json object to this json
@@ -206,14 +185,6 @@ namespace JSORON
          */
         JSONValue& operator[](std::string key);
         
-        /**
-         * @brief access values in json object
-         * @param key - the key associated with the value to be pulled from the json object
-         * @return if key exists in json object, returns a reference the value associated with 
-         *         key else return a reference to a JSONValue of type ValueType::NULL_TYPE
-         */
-        const JSONValue& operator[](std::string key) const;
-
         friend class JSONParser;
 
         friend bool operator==(const JSONObject& lhs, const JSONObject& rhs);
@@ -239,7 +210,7 @@ namespace JSORON
     template<typename T>
     void JSONObject::JSONArray::PushBack(const T& value)
     {
-        JSONValue *new_val = new JSONValue(value);
+        JSONValue new_val(value);
         array.push_back(new_val);
     }
 
@@ -263,16 +234,6 @@ namespace JSORON
         if (res.second)
         {
             insertion_order.push_back(key);
-        }
-    }
-    
-    template<typename T>
-    void JSONObject::Put(JSONValue* value)
-    {
-        auto res = json.insert({value->str_val, value});
-        if (res.second)
-        {
-            insertion_order.push_back(value->str_val);
         }
     }
     

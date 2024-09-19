@@ -15,18 +15,6 @@
 
 namespace JSORON
 {
-    JSONObject bad_obj = JSONObject();
-
-#ifdef PROFILING
-    struct parser_profiling_data
-    {
-        u64 lexing;
-        u64 parsing;
-        u64 erasing;
-        u64 create_keys;
-    }; 
-#endif /* PROFILING */
-
     class JSONParser 
     {
 #ifndef NDEBUG
@@ -54,7 +42,7 @@ namespace JSORON
                 std::string str_tok;
                 char punc_tok;
                 s32 int_tok;
-                f32 double_tok;
+                f64 double_tok;
             };
     
             Token() : type(TokenType::NULL_TYPE) {}
@@ -64,7 +52,7 @@ namespace JSORON
             Token(const std::string str_tok) : type(TokenType::STR), str_tok(str_tok) {}
             Token(const char punc_tok) : type(TokenType::PUNCTUATION), punc_tok(punc_tok) {}
             Token(const s32 int_tok) : type(TokenType::INT), int_tok(int_tok) {}
-            Token(const f32 double_tok) : type(TokenType::DOUBLE), double_tok(double_tok) {}
+            Token(const f64 double_tok) : type(TokenType::DOUBLE), double_tok(double_tok) {}
     
             ~Token();
 
@@ -80,17 +68,9 @@ namespace JSORON
     
     public:
         typedef std::list<Token> TokenList;
-
-#ifdef PROFILING          
-        void InitProfilingData(parser_profiling_data* pd);
-#endif /* PROFILING */
            
         JSONObject Parse(const std::string& json_str);
         JSONObject Parse(std::ifstream& json_file); 
-#ifdef PROFILING          
-        JSONObject& ProfiledParse(std::ifstream& json_file);
-        JSONObject& ProfiledParse(const std::string& json_str); 
-#endif /* PROFILING */
         
         friend bool operator==(const JSONParser& lhs, const JSONParser& rhs);
         friend bool operator!=(const JSONParser& lhs, const JSONParser& rhs);
@@ -99,6 +79,7 @@ namespace JSORON
 #ifdef NDEBUG
     private:
 #endif /* NDEBUG */
+        static const JSONObject bad_obj;
     
         void Lex(std::string json_str);
 
@@ -109,22 +90,11 @@ namespace JSORON
         b8 IsEndOfObj(const Token& tok);
         b8 IsEndOfArr(const Token& tok);
 
-// #ifdef PROFILING
-        JSONObject::JSONValue& _Parse();
-        JSONObject::JSONValue& ParseObj();
-        JSONObject::JSONValue& ParseArray();
-// #else
-#ifdef TEMP
         JSONObject::JSONValue _Parse();
         JSONObject::JSONValue ParseObj();
         JSONObject::JSONValue ParseArray();
-#endif /* PROFILING */
 
         TokenList tokens;
-
-#ifdef PROFILING          
-        parser_profiling_data* pd;
-#endif /* PROFILING */
     };
 }
 
