@@ -33,7 +33,7 @@ profiling_data pd = {0};
 
 int main(int argc, char *argv[])
 {
-	Tester tester;
+	// Tester tester;
 
     JSONObject obj = CreateJson();
 
@@ -47,10 +47,10 @@ int main(int argc, char *argv[])
     
     // TestJSONValueCasting(tester);
 
-    tester.TestAll();
+    // tester.TestAll();
 
-    std::cout << "\n"
-              << "JSON Creation: " << pd.json_creation << "\n";
+    // std::cout << "\n"
+    //           << "JSON Creation: " << pd.json_creation << "\n";
 
 	return 0;
 }
@@ -60,7 +60,7 @@ JSONObject CreateJson()
     typedef JSONObject::JSONArray JSONArray;
 
     /****************/
-    pd.json_creation = profiler::StartCPU();
+    // pd.json_creation = profiler::StartCPU();
     /****************/
 
 	JSONObject json;
@@ -84,16 +84,15 @@ JSONObject CreateJson()
 	JSONArray json_arr;
 	for (u64 index = 0; index < num_obj; ++index)
 	{
-		JSONObject *json_obj = new JSONObject();
-		json_obj->Put("num", (s32)index);
+		JSONObject json_obj;
+		json_obj.Put("num", (s32)index);
 		json_arr.PushBack(json_obj);
-        delete json_obj;
 	}	
 	
     json.Put("ArrayOfJsons", json_arr);
 
     /****************/
-    pd.json_creation = profiler::EndCPU(pd.json_creation);
+    // pd.json_creation = profiler::EndCPU(pd.json_creation);
     /****************/
 
     return json;
