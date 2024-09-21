@@ -18,10 +18,6 @@
 - [Usage](#usage)
   - [JSONObject](#jsonobject)
   - [JSONParser](#jsonparser)
-- [Examples](#examples)
-- [Testing](#testing)
-- [Contributing](#contributing)
-- [License](#license)
 
 ## Installation
 
@@ -54,8 +50,8 @@ Example usage:
 ```cpp
 using nammespace JSORON;
 JSONObject obj;
-obj.put("name", "JSORON");
-obj.put("version", 1.0);
+obj.Put("name", "JSORON");
+obj.Put("version", 1.0);
 std::string name = obj["name"];
 ```
 
@@ -68,7 +64,7 @@ Example usage:
 ```cpp
 using nammespace JSORON;
 JSONParser parser;
-JSONObject obj = parser.parse("{\"name\": \"JSORON\", \"version\": 1.0}");
+JSONObject obj = parser.Parse("{\"name\": \"JSORON\", \"version\": 1.0}");
 std::string name = obj["name"];
 ```
 
