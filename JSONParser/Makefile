@@ -1,7 +1,7 @@
 TARGET_NO_PROF = JSONParser
 TARGET_PROF = JSONParser_profiled
 
-OBJS = src/JSONParser.o ../JSONObject/src/JSONObject.o
+OBJS = src/JSONParser.o src/buffer.o ../JSONObject/src/JSONObject.o
 
 MAIN_OBJ_NO_PROF=test/$(TARGET_NO_PROF)_main.o
 MAIN_OBJ_PROF=test/$(TARGET_PROF)_main.o

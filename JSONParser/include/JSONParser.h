@@ -11,6 +11,7 @@
 #include <list>
 
 #include "JSONObject.h"
+#include "Buffer.h"
 #include "my_int.h"
 
 namespace JSORON
@@ -51,7 +52,7 @@ namespace JSORON
     
             union
             {
-                std::string str_tok;
+                Buffer str_tok;
                 char punc_tok;
                 s32 int_tok;
                 f32 double_tok;
@@ -61,7 +62,7 @@ namespace JSORON
             Token(const Token& other);
             Token& operator=(const Token& other);
 
-            Token(const std::string str_tok) : type(TokenType::STR), str_tok(str_tok) {}
+            Token(const Buffer *str, u64 size);
             Token(const char punc_tok) : type(TokenType::PUNCTUATION), punc_tok(punc_tok) {}
             Token(const s32 int_tok) : type(TokenType::INT), int_tok(int_tok) {}
             Token(const f32 double_tok) : type(TokenType::DOUBLE), double_tok(double_tok) {}
@@ -76,17 +77,18 @@ namespace JSORON
 
         private:
             void AssignTokByType(Token& dest, const Token& src, TokenType type);
+            void InitStrTok(const Buffer *str, u64 size);
         };
     
     public:
-        typedef std::list<Token> TokenList;
+        typedef std::list<Token*> TokenList;
 
 #ifdef PROFILING          
         void InitProfilingData(parser_profiling_data* pd);
 #endif /* PROFILING */
            
         JSONObject Parse(const std::string& json_str);
-        JSONObject Parse(std::ifstream& json_file); 
+        JSONObject Parse(const std::string& filename, std::ifstream& json_file); 
 #ifdef PROFILING          
         JSONObject& ProfiledParse(std::ifstream& json_file);
         JSONObject& ProfiledParse(const std::string& json_str); 

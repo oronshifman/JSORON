@@ -1,0 +1,12 @@
+*
+
+# Exclude these files:
+!**/*.asm
+!**/*.c
+!**/*.h
+!**/*.cpp
+!**/*.hpp
+!**/*.sh
+!**/*.md
+!.gitignore
+!Makefile

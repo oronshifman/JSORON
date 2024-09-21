@@ -8,10 +8,12 @@
 #include <string>
 #include <list>
 #include <iostream>
+#include <sys/stat.h> // struct stat, stat()
 
 #include "JSONParser.h"
 #include "JSONObject.h"
 #include "my_int.h"
+#include "Buffer.h"
 #include "profiler.h"
 
 namespace JSORON
@@ -20,7 +22,24 @@ namespace JSORON
     
     JSONParser::Token::Token(const Token& other) : type(other.type)
     {
+        if (this == &other)
+        {
+            return;
+        }
+
         AssignTokByType(*this, other, other.type);
+    }
+
+    JSONParser::Token::Token(const Buffer *str, u64 size) : type(TokenType::STR)
+    {
+        InitStrTok(str, size);
+    }
+
+    void JSONParser::Token::InitStrTok(const Buffer *str, u64 size)
+    {
+        str_tok.mem = str->mem;
+        str_tok.at = str->at;
+        str_tok.size = size;
     }
 
     JSONParser::Token& JSONParser::Token::operator=(const JSONParser::Token& other)
@@ -41,7 +60,7 @@ namespace JSORON
         {
             case JSONParser::TokenType::STR:
             {
-                new (&dest.str_tok) std::string(src.str_tok);
+               dest.str_tok = src.str_tok;
             } break;
 
             case JSONParser::TokenType::PUNCTUATION:
@@ -90,14 +109,13 @@ namespace JSORON
     }
 #endif /* PROFILING */
     
-    JSONObject JSONParser::Parse(std::ifstream& json_file)
+    JSONObject JSONParser::Parse(const std::string& filename, std::ifstream& json_file)
     {
-        u64 file_size = 0;
-	    json_file.seekg(0, std::ios_base::end);
-	    file_size = json_file.tellg();
-	    json_file.seekg(0);
+	    struct stat json_file_stat;
+        stat(filename.c_str(), &json_file_stat);
+        u64 file_size = json_file_stat.st_size;
 
-	    std::string json_str(file_size, ' ');
+        std::string json_str(file_size, ' ');
         
         json_file.read(&json_str[0], file_size);
 	    if (json_file.fail())
