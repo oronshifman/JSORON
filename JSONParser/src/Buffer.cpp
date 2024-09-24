@@ -11,7 +11,6 @@
 
 Buffer::Buffer(u64 size)
 {
-    at = 0;
     mem = (char *)malloc(size);
 
     if (!mem)
@@ -34,7 +33,6 @@ Buffer::Buffer(const Buffer& other)
 
     this->~Buffer();
     mem = other.mem;
-    at = other.at;
     size = other.size;
 }
 
@@ -47,7 +45,6 @@ Buffer& Buffer::operator=(const Buffer& other)
 
     this->~Buffer();
     mem = other.mem;
-    at = other.at;
     size = other.size;
 
     return *this;
@@ -56,7 +53,6 @@ Buffer& Buffer::operator=(const Buffer& other)
 Buffer::~Buffer()
 {
     free(mem);
-    at = 0;
     size = 0;
 }
 
@@ -72,5 +68,5 @@ bool operator==(const Buffer& lhs, const Buffer& rhs)
         return 0;
     }
 
-    return strncmp(&(lhs.mem[lhs.at]), &(rhs.mem[rhs.at]), lhs.size) == 0 ? 1 : 0;
+    return strncmp(lhs.mem, rhs.mem, lhs.size) == 0 ? 1 : 0;
 }

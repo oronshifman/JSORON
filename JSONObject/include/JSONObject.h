@@ -193,8 +193,8 @@ namespace JSORON
         template<typename T>
         void Put(const std::string key, const T& value);
 
-        template<typename T>
-        void Put(const std::string key, T* value);
+        // template<typename T>
+        // void Put(const std::string key, T* value);
     
         /**
          * @brief adds a new json object to this json
@@ -284,15 +284,15 @@ namespace JSORON
     
     // TODO(18.09.24): Working on having a Put that takes a pointer to a JSONValue or a JSONObject
     // and puts that pointer into the JSONObject's map to avoid copying
-    template<typename T>
-    void JSONObject::Put(const std::string key, T* value)
-    {
-        auto res = json.insert({key, value});
-        if (res.second)
-        {
-            insertion_order.push_back(key);
-        }
-    }
+    // template<typename T>
+    // void JSONObject::Put(const std::string key, T* value)
+    // {
+    //     auto res = json.insert({key, value});
+    //     if (res.second)
+    //     {
+    //         insertion_order.push_back(key);
+    //     }
+    // }
     
     template<typename T>
     std::vector<T>& JSONObject::AddArr(const std::string& key)

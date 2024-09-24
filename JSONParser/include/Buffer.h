@@ -13,10 +13,9 @@ class Buffer
 {
 public:
     char *mem;
-    u64 at;
     u64 size;
 
-    Buffer() : mem(nullptr), at(0), size(0) {}
+    Buffer() : mem(nullptr), size(0) {}
     Buffer(u64 size);
     Buffer(const Buffer& other);
     Buffer& operator=(const Buffer& other);

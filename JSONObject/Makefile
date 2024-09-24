@@ -38,11 +38,11 @@ debug: $(DEBUG_BIN)
 $(PROFILED_BIN): $(MAIN_OBJ_PROF) $(OBJS) $(TEST)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(PROFILED_BIN) $(MAIN_OBJ_PROF) $(OBJS) $(TEST)
 
-$(DEBUG_BIN): $(OBJS) $(TEST)
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(DEBUG_BIN) $(OBJS) $(TEST)
+$(DEBUG_BIN): $(MAIN_OBJ_NO_PROF) $(OBJS) $(TEST)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(DEBUG_BIN) $(MAIN_OBJ_NO_PROF) $(OBJS) $(TEST)
 
-$(RELEASE_BIN): $(OBJS) $(TEST)
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(RELEASE_BIN) $(OBJS) $(TEST)
+$(RELEASE_BIN): $(MAIN_OBJ_NO_PROF) $(OBJS) $(TEST)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(RELEASE_BIN) $(MAIN_OBJ_NO_PROF) $(OBJS) $(TEST)
 
 clean:
 	-rm -f build/* src/*.o test/*.o; touch build/dummy.md
