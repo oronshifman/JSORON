@@ -43,6 +43,24 @@ namespace JSORON
         class JSONValue;
         class JSONArray
         {
+        private:
+            std::vector<JSONValue*> array;
+
+            class JSONValueIterator {
+            public:
+                using iterator_type = std::vector<JSONValue*>::iterator;
+
+                JSONValueIterator(iterator_type it) : current(it) {}
+
+                JSONValue& operator*() const;
+
+                JSONValueIterator& operator++();
+
+                bool operator!=(const JSONValueIterator& other) const;
+            private:
+                iterator_type current;
+            };
+
         public:
             JSONArray() : array() {}
             JSONArray(const JSONArray& other);
@@ -58,13 +76,11 @@ namespace JSORON
             JSONValue Erase(u64 index);
             JSONValue& At(u64 index) const;
 
-            std::vector<JSONValue*>::iterator begin();
-            std::vector<JSONValue*>::iterator end();
+            JSONValueIterator begin();
+            JSONValueIterator end();
 
             friend bool operator==(const JSONArray& lhs, const JSONArray& rhs);
             friend bool operator!=(const JSONArray& lhs, const JSONArray& rhs);
-        private:
-            std::vector<JSONValue*> array;
         };
         
         class JSONValue 

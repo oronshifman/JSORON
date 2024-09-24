@@ -1,6 +1,7 @@
 *
 
 # Exclude these files:
+!**/
 !**/*.asm
 !**/*.c
 !**/*.h

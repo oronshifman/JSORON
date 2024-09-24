@@ -54,14 +54,30 @@ u64 JSONObject::JSONArray::Size() const
     return array.size();
 }
 
-std::vector<JSONObject::JSONValue*>::iterator JSONObject::JSONArray::begin()
+JSONObject::JSONArray::JSONValueIterator JSONObject::JSONArray::begin()
 {
-    return array.begin();
+    return JSONValueIterator(array.begin());
 }
 
-std::vector<JSONObject::JSONValue*>::iterator JSONObject::JSONArray::end()
+JSONObject::JSONArray::JSONValueIterator JSONObject::JSONArray::end()
 {
-    return array.end();
+    return JSONValueIterator(array.end());
+}
+
+JSONObject::JSONValue& JSONObject::JSONArray::JSONValueIterator::operator*() const
+{
+    return **current;  // Dereference the pointer
+}
+
+JSONObject::JSONArray::JSONValueIterator& JSONObject::JSONArray::JSONValueIterator::operator++()
+{
+    ++current;
+    return *this;
+}
+
+bool JSONObject::JSONArray::JSONValueIterator::operator!=(const JSONValueIterator& other) const
+{
+    return current != other.current;
 }
 
 JSONObject::JSONValue JSONObject::bad_value(JSONObject::ValueType::BAD_TYPE);
