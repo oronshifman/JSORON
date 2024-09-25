@@ -86,16 +86,20 @@ namespace JSORON
     
     JSONObject JSONParser::Parse(std::ifstream& json_file)
     {
-        // TODO(7.8.24): impl
-        std::string json_str;
-        for (std::string line; std::getline(json_file, line);) 
+	    u64 file_size = 0;
+	    json_file.seekg(0, std::ios_base::end);
+	    file_size = json_file.tellg();
+	    json_file.seekg(0);
+
+        std::string json_str(file_size, ' ');
+        
+        json_file.read(&json_str[0], file_size);
+	    if (json_file.fail())
         {
-            json_str += line;
+            return bad_obj;
         }
 
-        Parse(json_str);
-
-        return bad_obj;
+        return Parse(json_str); 
     }
     
     JSONObject JSONParser::Parse(const std::string& json_str)
