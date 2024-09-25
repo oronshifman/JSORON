@@ -2,7 +2,7 @@
 *
 
 # Exclude these files:
-!/**/
+!**/
 !src/*.cpp
 !test/*.cpp
 !**/*.h

@@ -139,6 +139,24 @@ namespace JSORON
              * @return JSONValue with the nested JSONObject
              */
             JSONValue operator[](std::string key);
+            
+            /**
+             * @brief for accessing keys from a nested json
+             * @return JSONValue with the nested JSONObject
+             */
+            JSONValue operator[](const char* key);
+            
+            /**
+             * @brief for accessing keys from a nested json
+             * @return JSONValue with the nested JSONObject
+             */
+            const JSONValue operator[](std::string key) const;
+            
+            /**
+             * @brief for accessing keys from a nested json
+             * @return JSONValue with the nested JSONObject
+             */
+            const JSONValue operator[](const char* key) const;
 
             void PrintValueByType(u8 indent, std::ostream& out) const;
             void AssignValueByType(const JSONValue& src);
@@ -176,7 +194,6 @@ namespace JSORON
     
         void Remove(std::string key);
        
-       
         /**
          * @brief access values in json object
          * @param key - the key associated with the value to be pulled from the json object
@@ -184,6 +201,14 @@ namespace JSORON
          *         key else return a reference to a JSONValue of type ValueType::NULL_TYPE
          */
         JSONValue& operator[](std::string key);
+
+        /**
+         * @brief access values in json object
+         * @param key - the key associated with the value to be pulled from the json object
+         * @return if key exists in json object, returns a reference the value associated with 
+         *         key else return a reference to a JSONValue of type ValueType::NULL_TYPE
+         */
+        const JSONValue& operator[](std::string key) const;
         
         friend class JSONParser;
 

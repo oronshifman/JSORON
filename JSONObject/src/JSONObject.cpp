@@ -170,12 +170,28 @@ JSONObject::JSONValue JSONObject::JSONValue::operator[](u64 index)
 
 JSONObject::JSONValue JSONObject::JSONValue::operator[](std::string key)
 {
+    const JSONValue val = static_cast<const JSONValue&>(*this)[key];
+    return const_cast<JSONValue&>(val);
+}
+
+const JSONObject::JSONValue JSONObject::JSONValue::operator[](std::string key) const
+{
     if (type == JSONObject::ValueType::JSON_OBJECT)
     {
         return (*json_val)[key];
     }
 
     return JSONObject::bad_value;
+}
+
+JSONObject::JSONValue JSONObject::JSONValue::operator[](const char* key)
+{
+    return (*this)[std::string(key)];
+}
+
+const JSONObject::JSONValue JSONObject::JSONValue::operator[](const char* key) const
+{
+    return (*this)[std::string(key)];
 }
 
 void JSONObject::JSONValue::PrintValueByType(u8 indent, std::ostream& out) const
@@ -354,7 +370,13 @@ void JSONObject::Remove(std::string key)
 
 JSONObject::JSONValue& JSONObject::operator[](std::string key)
 {
-    JSONIter value = json.find(key);
+    return const_cast<JSONValue&>(static_cast<const JSONObject&>(*this)[key]);
+}
+
+const JSONObject::JSONValue& JSONObject::operator[](std::string key) const
+{
+    
+    auto value = json.find(key);
     if (value == json.end())
     {
         return bad_value;
