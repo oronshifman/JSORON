@@ -57,7 +57,7 @@ std::vector<JSONObject::JSONValue>::iterator JSONObject::JSONArray::begin()
 
 std::vector<JSONObject::JSONValue>::iterator JSONObject::JSONArray::end()
 {
-    return array.begin();
+    return array.end();
 }
 
 JSONObject::JSONValue JSONObject::bad_value(JSONObject::ValueType::BAD_TYPE);

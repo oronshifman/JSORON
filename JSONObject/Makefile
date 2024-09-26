@@ -1,8 +1,8 @@
 TARGET = JSONObject
 
-OBJS = src/JSONObject.o test/test_JSONObject.o
+OBJS = src/JSONObject.o test/JSONObject_main.o
 
-TEST=../../utils/generic_test.o
+TEST=../../new_part2/utils/generic_test.o
 
 RELEASE_BIN = build/$(TARGET)_release
 DEBUG_BIN = build/$(TARGET)_debug
@@ -11,7 +11,7 @@ CXX=g++
 
 CXXFLAGS=-Wall -std=c++11
 
-CPPFLAGS=-Iinclude -I../JSONParser/include -I../../utils
+CPPFLAGS=-Iinclude -I../JSONParser/include -I../../new_part2/utils
 
 RELEASE_FLAGS=-DNDEBUG -O3
 DEBUG_FLAG=-g3

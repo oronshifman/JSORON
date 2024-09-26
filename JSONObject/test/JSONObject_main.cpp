@@ -16,20 +16,23 @@ void TestObjectCopyAssignment(Tester& tester);
 void TestJSONValueCopyAssignment(Tester& tester);
 void TestOperatorSquareBrackets(Tester& tester);
 void TestJSONValueCasting(Tester& tester);
+void TestJSONArray(Tester& tester);
 
 int main(int argc, char *argv[])
 {
 	Tester tester;
     
-    TestOperatorSquareBrackets(tester);
+    // TestOperatorSquareBrackets(tester);
 
-    TestObjectCopyCtor(tester);
+    // TestObjectCopyCtor(tester);
 
-    TestObjectCopyAssignment(tester);
+    // TestObjectCopyAssignment(tester);
 
-    TestJSONValueCopyAssignment(tester);
+    // TestJSONValueCopyAssignment(tester);
     
-    TestJSONValueCasting(tester);
+    // TestJSONValueCasting(tester);
+
+    TestJSONArray(tester);
 
     tester.TestAll();
 
@@ -70,6 +73,18 @@ JSONObject CreateJson()
     json.Put("ArrayOfJsons", json_arr);
 
     return json;
+}
+
+void TestJSONArray(Tester& tester)
+{
+    JSONObject obj = CreateJson();
+    JSONArray arr = obj["ArrayOfJsons"];
+
+    for (auto& num : arr)
+    {
+        int x = num["num"];
+        std::cout << x << " ";
+    }
 }
 
 void TestObjectCopyCtor(Tester& tester)
