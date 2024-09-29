@@ -24,7 +24,7 @@
 To install and use the JSORON library, first clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/JSORON.git
+git clone https://github.com/oronshifman/JSORON.git
 ```
 
 Navigate to the project directory:
