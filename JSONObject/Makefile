@@ -11,7 +11,7 @@ CXX=g++
 
 CXXFLAGS=-Wall -std=c++11
 
-CPPFLAGS=-Iinclude -I../JSONParser/include -I../../new_part2/utils
+CPPFLAGS=-Iinclude -I../../new_part2/utils -I../../new_part2/profiler/include -I../JSONParser/include
 
 RELEASE_FLAGS=-DNDEBUG -O3
 DEBUG_FLAG=-g3

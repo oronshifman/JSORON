@@ -105,7 +105,7 @@ namespace JSORON
     
     JSONObject JSONParser::Parse(const std::string& json_str)
     {
-        Profiler::TimeFunction; // NOTE(25.09.24): PROFILING
+        Profiler_TimeFunction; // NOTE(25.09.24): PROFILING
 
         Lex(json_str);
         return *(_Parse().json_val);

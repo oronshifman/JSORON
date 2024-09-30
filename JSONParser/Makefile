@@ -11,7 +11,7 @@ CXX=g++
 
 CXXFLAGS=-Wall -std=c++11
 
-CPPFLAGS=-Iinclude -I../../utils -I../JSONObject/include
+CPPFLAGS=-Iinclude -I../../new_part2/utils -I../../new_part2/profiler/include -I../JSONObject/include
 
 RELEASE_FLAGS=-DNDEBUG -O3
 DEBUG_FLAG=-g3
