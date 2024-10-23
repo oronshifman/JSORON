@@ -113,6 +113,8 @@ namespace JSORON
 
     JSONObject::JSONValue JSONParser::_Parse()
     {
+        Profiler_TimeFunction; // NOTE(23.10.24): PROFILING
+
         Token curr_tok = tokens.front();
         tokens.erase(tokens.begin());
 
@@ -164,6 +166,8 @@ namespace JSORON
     
     JSONObject::JSONValue JSONParser::ParseObj()
     {
+        Profiler_TimeFunction; // NOTE(23.10.24): PROFILING
+
         JSONObject obj;
         
         Token curr_tok = tokens.front();
@@ -200,6 +204,8 @@ namespace JSORON
 
     JSONObject::JSONValue JSONParser::ParseArray()
     {
+        Profiler_TimeFunction; // NOTE(23.10.24): PROFILING
+
         JSONArray arr;
 
         Token curr_tok = tokens.front();

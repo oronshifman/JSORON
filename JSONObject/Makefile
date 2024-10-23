@@ -16,7 +16,7 @@ CPPFLAGS=-Iinclude -I../../new_part2/utils -I../../new_part2/profiler/include -I
 RELEASE_FLAGS=-DNDEBUG -O3
 DEBUG_FLAG=-g3
 
-all:
+all: debug release
 
 release: CXXFLAGS+=$(RELEASE_FLAGS)
 release: $(RELEASE_BIN) 

@@ -1,8 +1,8 @@
 TARGET = JSONParser
 
-OBJS = src/JSONParser.o test/test_JSONParser.o ../JSONObject/src/JSONObject.o
+OBJS = src/JSONParser.o test/test_JSONParser.o ../JSONObject/src/JSONObject.o ../../new_part2/profiler/src/profiler.o
 
-TEST=../../utils/generic_test.o
+TEST=../../new_part2/utils/generic_test.o
 
 RELEASE_BIN = build/$(TARGET)_release
 DEBUG_BIN = build/$(TARGET)_debug
@@ -16,7 +16,7 @@ CPPFLAGS=-Iinclude -I../../new_part2/utils -I../../new_part2/profiler/include -I
 RELEASE_FLAGS=-DNDEBUG -O3
 DEBUG_FLAG=-g3
 
-all:
+all: debug release
 
 release: CXXFLAGS+=$(RELEASE_FLAGS)
 release: $(RELEASE_BIN) 
