@@ -105,8 +105,6 @@ namespace JSORON
     
     JSONObject JSONParser::Parse(const std::string& json_str)
     {
-        Profiler_TimeFunction; // NOTE(25.09.24): PROFILING
-
         Lex(json_str);
         return *(_Parse().json_val);
     }
@@ -237,6 +235,8 @@ namespace JSORON
 
     void JSONParser::Lex(std::string json_str)
     {
+        Profiler_TimeFunction; // NOTE(25.09.24): PROFILING
+
         while (!json_str.empty())
         {
             if (std::isdigit(json_str[0]) || json_str[0] == '-')
