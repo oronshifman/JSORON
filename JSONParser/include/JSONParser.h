@@ -81,11 +81,11 @@ namespace JSORON
 #endif /* NDEBUG */
         static const JSONObject bad_obj;
     
-        void Lex(std::string json_str);
+        void Lex(const std::string& json_str);
 
         void LexPunctuation(const char punc);
-        void LexString(const std::string& json_str);
-        u8 LexNumber(const std::string& json_str);
+        u32 LexString(const std::string& json_str, u32 at);
+        u8 LexNumber(const std::string& json_str, u32 at);
 
         b8 IsEndOfObj(const Token& tok);
         b8 IsEndOfArr(const Token& tok);

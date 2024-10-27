@@ -111,7 +111,7 @@ namespace JSORON
 
     JSONObject::JSONValue JSONParser::_Parse()
     {
-        Profiler_TimeFunction; // NOTE(23.10.24): PROFILING
+        // Profiler_TimeFunction; // NOTE(23.10.24): PROFILING
 
         Token curr_tok = tokens.front();
         tokens.erase(tokens.begin());
@@ -164,7 +164,7 @@ namespace JSORON
     
     JSONObject::JSONValue JSONParser::ParseObj()
     {
-        Profiler_TimeFunction; // NOTE(23.10.24): PROFILING
+        // Profiler_TimeFunction; // NOTE(23.10.24): PROFILING
 
         JSONObject obj;
         
@@ -202,7 +202,7 @@ namespace JSORON
 
     JSONObject::JSONValue JSONParser::ParseArray()
     {
-        Profiler_TimeFunction; // NOTE(23.10.24): PROFILING
+        // Profiler_TimeFunction; // NOTE(23.10.24): PROFILING
 
         JSONArray arr;
 
@@ -233,47 +233,46 @@ namespace JSORON
         return 0;
     }
 
-    void JSONParser::Lex(std::string json_str)
+    void JSONParser::Lex(const std::string& json_str)
     {
-        Profiler_TimeFunction; // NOTE(25.09.24): PROFILING
-
-        while (!json_str.empty())
+        // Profiler_TimeFunction; // NOTE(25.09.24): PROFILING
+        
+        for (u32 at = 0; at < json_str.size();)
         {
-            if (std::isdigit(json_str[0]) || json_str[0] == '-')
+            if (std::isdigit(json_str[at]) || json_str[at] == '-')
             {
-                u8 num_digits = LexNumber(json_str);
+                u8 num_digits = LexNumber(json_str, at);
 
-                if (json_str[0] == '-')
-                {
-                    json_str.erase(json_str.begin());
-                }
-
-                json_str.erase(0, num_digits);
+                at += num_digits;
 
                 continue;
             } 
 
-            if (std::ispunct(json_str[0]))
+            if (std::ispunct(json_str[at]))
             {
-                LexPunctuation(json_str[0]);
-                json_str.erase(json_str.begin());
+                LexPunctuation(json_str[at]);
+
+                ++at;
+
                 continue;
             }
 
-            if (std::isspace(json_str[0]))
+            if (std::isspace(json_str[at]))
             {
-                while (std::isspace(json_str[0]))
+                // Profiler_TimeBlock("Lexing spaces"); // NOTE(27.10.24): PROFILING
+
+                while (std::isspace(json_str[at]))
                 {
-                    json_str.erase(json_str.begin());
+                    ++at;
                 }
 
                 continue;
             }
     
-            if (std::isalpha(json_str[0]))
+            if (std::isalpha(json_str[at]))
             {
-                LexString(json_str);
-                json_str.erase(0, tokens.back().str_tok.size());
+                at += LexString(json_str, at);
+
                 continue;
             }
         }
@@ -281,6 +280,8 @@ namespace JSORON
     
     void JSONParser::LexPunctuation(const char punc)
     {
+        // Profiler_TimeFunction; // NOTE(27.10.24): PROFILING
+
         switch (punc)
         {
             case '{':
@@ -319,31 +320,38 @@ namespace JSORON
         }
     }
     
-    void JSONParser::LexString(const std::string& json_str)
+    u32 JSONParser::LexString(const std::string& json_str, u32 at)
     {
+        // Profiler_TimeFunction; // NOTE(27.10.24): PROFILING
+
         std::string str;
 
-        auto iter = json_str.begin();
-        while (*iter != '"')
+        u32 string_start = at;
+        while (json_str[at] != '"')
         {
-            ++iter;
+            ++at;
         }
-            
-        str.insert(str.begin(), json_str.begin(), iter);
+
+        u32 count = at - string_start; 
+        str.insert(0, json_str, string_start, count);
         tokens.push_back(Token(str));
+
+        return count;
     }
     
-    u8 JSONParser::LexNumber(const std::string& json_str)
+    u8 JSONParser::LexNumber(const std::string& json_str, u32 at)
     {
+        // Profiler_TimeFunction; // NOTE(27.10.24): PROFILING
+
         std::string num;
         b8 is_float = 0;
 
-        u64 index = 0;
+        u64 index = at;
         s8 sign = 1;
-        if (json_str[0] == '-')
+        if (json_str[at] == '-')
         {
             sign = -1;
-            index = 1;
+            index = at + 1;
         }
 
         while (1)
@@ -385,7 +393,7 @@ namespace JSORON
             tokens.push_back(Token(new_int));
         }
 
-        return num.size();
+        return sign < 0 ? num.size() + 1 : num.size();
     }
 
     bool operator==(const JSONParser& lhs, const JSONParser& rhs)
