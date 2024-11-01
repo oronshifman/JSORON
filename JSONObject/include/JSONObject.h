@@ -58,6 +58,8 @@ namespace JSORON
             JSONValue Erase(u64 index);
             JSONValue At(u64 index) const;
 
+            std::vector<JSONValue>::const_iterator begin() const;
+            std::vector<JSONValue>::const_iterator end() const;
             std::vector<JSONValue>::iterator begin();
             std::vector<JSONValue>::iterator end();
 
@@ -93,12 +95,12 @@ namespace JSORON
     
             JSONValue(const ValueType& type) : type(type) {}
     
-            JSONValue(const ValueType type, const std::string key) : type(type), str_val(key) {}
+            JSONValue(const ValueType type, const std::string& key) : type(type), str_val(key) {}
             JSONValue(const s32 value) : type(ValueType::INT), int_val(value) {}
             JSONValue(const f64 value) : type(ValueType::DOUBLE), double_val(value) {}
-            JSONValue(const std::string value) : type(ValueType::STR), str_val(value) {}
-            JSONValue(const JSONObject *value);
-            JSONValue(const JSONObject &value);
+            JSONValue(const std::string& value) : type(ValueType::STR), str_val(value) {}
+            JSONValue(const JSONObject* value);
+            JSONValue(const JSONObject& value);
     
             JSONValue(const JSONArray& arr) : type(ValueType::ARR), json_arr(arr) {}
             
@@ -130,7 +132,13 @@ namespace JSORON
              * @brief overloading cast to JSONArray.
              * @throw bad_cast
              */
-            operator JSONArray() const;
+            // operator JSONArray() const;
+            
+            /**
+             * @brief overloading cast to JSONArray.
+             * @throw bad_cast
+             */
+            operator JSONArray&() const;
         
             JSONValue operator[](u64 key);
 
@@ -138,25 +146,25 @@ namespace JSORON
              * @brief for accessing keys from a nested json
              * @return JSONValue with the nested JSONObject
              */
-            JSONValue operator[](std::string key);
+            JSONValue& operator[](std::string key);
             
             /**
              * @brief for accessing keys from a nested json
              * @return JSONValue with the nested JSONObject
              */
-            JSONValue operator[](const char* key);
+            JSONValue& operator[](const char* key);
             
             /**
              * @brief for accessing keys from a nested json
              * @return JSONValue with the nested JSONObject
              */
-            const JSONValue operator[](std::string key) const;
+            const JSONValue& operator[](std::string key) const;
             
             /**
              * @brief for accessing keys from a nested json
              * @return JSONValue with the nested JSONObject
              */
-            const JSONValue operator[](const char* key) const;
+            const JSONValue& operator[](const char* key) const;
 
             void PrintValueByType(u8 indent, std::ostream& out) const;
             void AssignValueByType(const JSONValue& src);

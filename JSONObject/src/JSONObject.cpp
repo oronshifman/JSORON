@@ -10,6 +10,7 @@
 #include <assert.h>
 
 #include "JSONObject.h"
+#include "profiler.h"
 
 namespace JSORON
 {
@@ -48,6 +49,16 @@ JSONObject::JSONValue JSONObject::JSONArray::At(u64 index) const
 u64 JSONObject::JSONArray::Size() const
 {
     return array.size();
+}
+
+std::vector<JSONObject::JSONValue>::const_iterator JSONObject::JSONArray::begin() const
+{
+    return array.begin();
+}
+
+std::vector<JSONObject::JSONValue>::const_iterator JSONObject::JSONArray::end() const
+{
+    return array.end();
 }
 
 std::vector<JSONObject::JSONValue>::iterator JSONObject::JSONArray::begin()
@@ -135,11 +146,12 @@ JSONObject::JSONValue::operator JSONObject*() const
     }
 }
 
-JSONObject::JSONValue::operator JSONArray() const
+// NOTE(01.11.24): this functions casts away const!!!
+JSONObject::JSONValue::operator JSONArray&() const
 {
     if (type == JSONObject::ValueType::ARR)
     {
-        return json_arr;
+        return const_cast<JSONArray&>(json_arr);
     }
     else
     {
@@ -168,13 +180,13 @@ JSONObject::JSONValue JSONObject::JSONValue::operator[](u64 index)
     }
 }
 
-JSONObject::JSONValue JSONObject::JSONValue::operator[](std::string key)
+JSONObject::JSONValue& JSONObject::JSONValue::operator[](std::string key)
 {
-    const JSONValue val = static_cast<const JSONValue&>(*this)[key];
+    const JSONValue& val = static_cast<const JSONValue&>(*this)[key];
     return const_cast<JSONValue&>(val);
 }
 
-const JSONObject::JSONValue JSONObject::JSONValue::operator[](std::string key) const
+const JSONObject::JSONValue& JSONObject::JSONValue::operator[](std::string key) const
 {
     if (type == JSONObject::ValueType::JSON_OBJECT)
     {
@@ -184,12 +196,12 @@ const JSONObject::JSONValue JSONObject::JSONValue::operator[](std::string key) c
     return JSONObject::bad_value;
 }
 
-JSONObject::JSONValue JSONObject::JSONValue::operator[](const char* key)
+JSONObject::JSONValue& JSONObject::JSONValue::operator[](const char* key)
 {
     return (*this)[std::string(key)];
 }
 
-const JSONObject::JSONValue JSONObject::JSONValue::operator[](const char* key) const
+const JSONObject::JSONValue& JSONObject::JSONValue::operator[](const char* key) const
 {
     return (*this)[std::string(key)];
 }
@@ -348,6 +360,8 @@ JSONObject& JSONObject::operator=(const JSONObject& other)
 
 JSONObject::~JSONObject()
 {
+    Profiler_TimeFunction; // NOTE(28.10.24): PROFILING
+
     for (auto& pair : json)
     {
         delete pair.second;
