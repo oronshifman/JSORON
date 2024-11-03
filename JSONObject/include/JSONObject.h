@@ -50,23 +50,61 @@ namespace JSORON
 
             ~JSONArray();
 
+            typedef std::vector<JSONValue*> ValueArray;
+
+            class Iterator {
+            public:
+                // Iterator traits
+                using iterator_category = std::forward_iterator_tag;
+                using value_type = JSONValue;
+                using difference_type = std::ptrdiff_t;
+                using pointer = JSONValue*;
+                using reference = JSONValue&;
+
+                // Constructor
+                Iterator(ValueArray::iterator iter) : is_const(0), m_iter(iter) {}
+                Iterator(ValueArray::const_iterator iter) : is_const(1), m_const_iter(iter) {}
+
+                // Dereference operator
+                reference operator*() const;
+
+                // Pre-increment operator
+                Iterator& operator++();
+
+                // Post-increment operator
+                Iterator operator++(int);
+
+                // Comparison operators
+                bool operator==(const Iterator& other) const;
+                bool operator!=(const Iterator& other) const;
+
+            private:
+                b8 is_const;
+                union
+                {
+                    ValueArray::iterator m_iter;  // Internal pointer for traversal
+                    ValueArray::const_iterator m_const_iter;  // Internal pointer for traversal
+                };
+                
+            };
+
             u64 Size() const;
             
             template<typename T>
             void PushBack(const T& value);
 
             JSONValue Erase(u64 index);
-            JSONValue At(u64 index) const;
+            JSONValue& At(u64 index) const;
 
-            std::vector<JSONValue>::const_iterator begin() const;
-            std::vector<JSONValue>::const_iterator end() const;
-            std::vector<JSONValue>::iterator begin();
-            std::vector<JSONValue>::iterator end();
+            Iterator begin() const;
+            Iterator end() const;
+            Iterator begin();
+            Iterator end();
 
             friend bool operator==(const JSONArray& lhs, const JSONArray& rhs);
             friend bool operator!=(const JSONArray& lhs, const JSONArray& rhs);
         private:
-            std::vector<JSONValue> array;
+            ValueArray array;
         };
         
         class JSONValue 
@@ -237,7 +275,7 @@ namespace JSORON
     template<typename T>
     void JSONObject::JSONArray::PushBack(const T& value)
     {
-        JSONValue new_val(value);
+        JSONValue *new_val = new JSONValue(value);
         array.push_back(new_val);
     }
 

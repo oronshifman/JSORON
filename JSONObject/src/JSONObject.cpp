@@ -15,6 +15,63 @@
 namespace JSORON
 {
 
+JSONObject::JSONValue& JSONObject::JSONArray::Iterator::operator*() const 
+{
+    if (is_const)
+    {
+        return **m_const_iter;
+    } 
+    else
+    {
+        return **m_iter; 
+    }
+}
+
+JSONObject::JSONArray::Iterator& JSONObject::JSONArray::Iterator::operator++() 
+{
+    if (is_const)
+    {
+        ++m_const_iter;
+        return *this;
+    }
+    else
+    {
+        ++m_iter;
+        return *this;
+    }
+}
+
+JSONObject::JSONArray::Iterator JSONObject::JSONArray::Iterator::operator++(int) 
+{
+    Iterator temp = *this;
+    ++(*this);
+    return temp;
+}                
+
+bool JSONObject::JSONArray::Iterator::operator==(const Iterator& other) const 
+{ 
+    if (is_const)
+    {
+        return m_const_iter == other.m_const_iter;
+    }
+    else
+    {
+        return m_iter == other.m_iter; 
+    }
+}
+
+bool JSONObject::JSONArray::Iterator::operator!=(const Iterator& other) const 
+{ 
+    if (is_const)
+    {
+        return m_const_iter == other.m_const_iter;
+    }
+    else
+    {
+        return m_iter == other.m_iter; 
+    }
+}
+
 JSONObject::JSONArray::JSONArray(const JSONObject::JSONArray& other)
 {
     array.assign(other.array.begin(), other.array.end());
@@ -36,14 +93,14 @@ JSONObject::JSONValue JSONObject::JSONArray::Erase(u64 index)
     assert(index < array.size());
 
     auto iter = array.erase(std::next(array.begin(), index));
-    return *iter;
+    return **iter;
 }
 
-JSONObject::JSONValue JSONObject::JSONArray::At(u64 index) const
+JSONObject::JSONValue& JSONObject::JSONArray::At(u64 index) const
 {
     assert(index < array.size());
     
-    return array[index];
+    return *array[index];
 }
 
 u64 JSONObject::JSONArray::Size() const
@@ -51,24 +108,24 @@ u64 JSONObject::JSONArray::Size() const
     return array.size();
 }
 
-std::vector<JSONObject::JSONValue>::const_iterator JSONObject::JSONArray::begin() const
+JSONObject::JSONArray::Iterator JSONObject::JSONArray::begin() const
 {
-    return array.begin();
+    return Iterator(array.begin());
 }
 
-std::vector<JSONObject::JSONValue>::const_iterator JSONObject::JSONArray::end() const
+JSONObject::JSONArray::Iterator JSONObject::JSONArray::end() const
 {
-    return array.end();
+    return Iterator(array.end());
 }
 
-std::vector<JSONObject::JSONValue>::iterator JSONObject::JSONArray::begin()
+JSONObject::JSONArray::Iterator JSONObject::JSONArray::begin()
 {
-    return array.begin();
+    return Iterator(array.begin());
 }
 
-std::vector<JSONObject::JSONValue>::iterator JSONObject::JSONArray::end()
+JSONObject::JSONArray::Iterator JSONObject::JSONArray::end()
 {
-    return array.end();
+    return Iterator(array.end());
 }
 
 JSONObject::JSONValue JSONObject::bad_value(JSONObject::ValueType::BAD_TYPE);
@@ -364,7 +421,7 @@ JSONObject& JSONObject::operator=(const JSONObject& other)
 
 JSONObject::~JSONObject()
 {
-    Profiler_TimeFunction; // NOTE(28.10.24): PROFILING
+    // Profiler_TimeFunction; // NOTE(28.10.24): PROFILING
 
     for (auto& pair : json)
     {

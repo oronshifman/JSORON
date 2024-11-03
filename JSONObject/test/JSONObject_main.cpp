@@ -9,36 +9,6 @@
 
 using namespace JSORON;
 
-JSONObject CreateJson();
-
-void TestObjectCopyCtor(Tester& tester);
-void TestObjectCopyAssignment(Tester& tester);
-void TestJSONValueCopyAssignment(Tester& tester);
-void TestOperatorSquareBrackets(Tester& tester);
-void TestJSONValueCasting(Tester& tester);
-void TestJSONArray(Tester& tester);
-
-int main(int argc, char *argv[])
-{
-	Tester tester;
-    
-    // TestOperatorSquareBrackets(tester);
-
-    // TestObjectCopyCtor(tester);
-
-    // TestObjectCopyAssignment(tester);
-
-    // TestJSONValueCopyAssignment(tester);
-    
-    // TestJSONValueCasting(tester);
-
-    TestJSONArray(tester);
-
-    tester.TestAll();
-
-	return 0;
-}
-
 JSONObject CreateJson()
 {
     typedef JSONObject::JSONArray JSONArray;
@@ -151,6 +121,47 @@ void TestJSONValueCasting(Tester& tester)
     }
 }
 
+void TestJSONArrayIterator(Tester& tester)
+{
+    typedef JSONObject::JSONArray JSONArray;
+
+    JSONObject json = CreateJson();
+
+    JSONArray json_arr = json["ArrayOfJsons"];
+    int count1 = 0;
+    for (auto& j : json_arr)
+    {
+        tester.AssertEqual(j.int_val, count1++, "TestJSONArrayIterator", __LINE__);
+    }
+
+    const JSONArray const_json_arr = json["ArrayOfJsons"];
+    int count2 = 0;
+    for (auto& j : const_json_arr)
+    {
+        tester.AssertEqual(j.int_val, count2++, "TestJSONArrayIterator", __LINE__);
+    }
+}
+
+int main(int argc, char *argv[])
+{
+	Tester tester;
+    
+    // TestOperatorSquareBrackets(tester);
+
+    // TestObjectCopyCtor(tester);
+
+    // TestObjectCopyAssignment(tester);
+
+    // TestJSONValueCopyAssignment(tester);
+    
+    // TestJSONValueCasting(tester);
+
+    TestJSONArray(tester);
+
+    tester.TestAll();
+
+	return 0;
+}
 
 
 
