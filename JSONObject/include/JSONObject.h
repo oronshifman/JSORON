@@ -108,32 +108,26 @@ namespace JSORON
              * @brief overloading cast to int.
              * @throw bad_cast
              */
-            operator int() const;
+            operator int&() const;
             
             /**
              * @brief overloading cast to double.
              * @throw bad_cast
              */
-            operator double() const;
+            operator double&() const;
            
             /**
              * @brief overloading cast to string.
              * @throw bad_cast
              */
-            operator std::string() const;
+            operator std::string&() const;
           
             /**
              * @brief overloading cast to JSONObject.
              * @throw bad_cast
              */
-            operator JSONObject*() const;
+            operator JSONObject&() const;
          
-            /**
-             * @brief overloading cast to JSONArray.
-             * @throw bad_cast
-             */
-            // operator JSONArray() const;
-            
             /**
              * @brief overloading cast to JSONArray.
              * @throw bad_cast

@@ -99,11 +99,12 @@ JSONObject::JSONValue& JSONObject::JSONValue::operator=(const JSONValue& other)
     return *this;
 }
 
-JSONObject::JSONValue::operator int() const
+// NOTE(01.11.24): this functions casts away const!!!
+JSONObject::JSONValue::operator int&() const
 {
     if (type == JSONObject::ValueType::INT)
     {
-        return int_val;
+        return const_cast<int&>(int_val);
     }
     else
     {
@@ -111,22 +112,24 @@ JSONObject::JSONValue::operator int() const
     }
 }
 
-JSONObject::JSONValue::operator double() const
+// NOTE(01.11.24): this functions casts away const!!!
+JSONObject::JSONValue::operator double&() const
 {
     if (type == JSONObject::ValueType::DOUBLE)
     {
-        return double_val;
+        return const_cast<double&>(double_val);
     } else
     {
         throw std::bad_cast();
     }
 }
 
-JSONObject::JSONValue::operator std::string() const
+// NOTE(01.11.24): this functions casts away const!!!
+JSONObject::JSONValue::operator std::string&() const
 {
     if (type == JSONObject::ValueType::STR)
     {
-        return str_val;
+        return const_cast<std::string&>(str_val);
     }
     else
     {
@@ -134,11 +137,12 @@ JSONObject::JSONValue::operator std::string() const
     }
 }
 
-JSONObject::JSONValue::operator JSONObject*() const
+// NOTE(01.11.24): this functions casts away const!!!
+JSONObject::JSONValue::operator JSONObject&() const
 {
     if (type == JSONObject::ValueType::JSON_OBJECT)
     {
-        return json_val;
+        return const_cast<JSONObject&>(*json_val);
     }
     else
     {

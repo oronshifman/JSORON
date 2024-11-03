@@ -116,7 +116,7 @@ namespace JSORON
         // Profiler_TimeFunction; // NOTE(23.10.24): PROFILING
 
         Token curr_tok = tokens.front();
-        tokens.erase(tokens.begin());
+        tokens.pop_front();
 
         if (curr_tok.type == TokenType::PUNCTUATION)
         {
@@ -148,10 +148,11 @@ namespace JSORON
 
             case TokenType::STR:
             {
-                if (tokens.front().type == TokenType::PUNCTUATION &&
-                    tokens.front().punc_tok == ':')
+                Token curr_tok_next = tokens.front();
+                if (curr_tok_next.type == TokenType::PUNCTUATION &&
+                    curr_tok_next.punc_tok == ':')
                 {
-                    tokens.erase(tokens.begin());
+                    tokens.pop_front();
                     return JSONValue(JSONObject::ValueType::KEY, curr_tok.str_tok);
                 }
                 else
