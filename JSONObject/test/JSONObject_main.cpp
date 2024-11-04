@@ -119,14 +119,14 @@ void TestJSONArrayIterator(Tester& tester)
     int count1 = 0;
     for (auto& j : json_arr)
     {
-        tester.AssertEqual(j.int_val, count1++, "TestJSONArrayIterator", __LINE__);
+        tester.AssertEqual((int)j["num"], count1++, "TestJSONArrayIterator", __LINE__);
     }
 
-    const JSONArray const_json_arr = json["ArrayOfJsons"];
+    const JSONArray& const_json_arr = json["ArrayOfJsons"];
     int count2 = 0;
     for (auto& j : const_json_arr)
     {
-        tester.AssertEqual(j.int_val, count2++, "TestJSONArrayIterator", __LINE__);
+        tester.AssertEqual((int)j["num"], count2++, "TestJSONArrayIterator", __LINE__);
     }
 }
 

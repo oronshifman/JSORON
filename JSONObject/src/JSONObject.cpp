@@ -23,28 +23,14 @@ namespace JSORON
 
 JSONObject::JSONValue& JSONObject::JSONArray::Iterator::operator*() const 
 {
-    if (is_const)
-    {
-        return **m_const_iter;
-    } 
-    else
-    {
-        return **m_iter; 
-    }
+    return is_const ? **m_const_iter : **m_iter;
 }
 
 JSONObject::JSONArray::Iterator& JSONObject::JSONArray::Iterator::operator++() 
 {
-    if (is_const)
-    {
-        ++m_const_iter;
-        return *this;
-    }
-    else
-    {
-        ++m_iter;
-        return *this;
-    }
+    is_const ? ++m_const_iter : ++m_iter;
+    
+    return *this;
 }
 
 JSONObject::JSONArray::Iterator JSONObject::JSONArray::Iterator::operator++(int) 
@@ -56,26 +42,15 @@ JSONObject::JSONArray::Iterator JSONObject::JSONArray::Iterator::operator++(int)
 
 bool JSONObject::JSONArray::Iterator::operator==(const Iterator& other) const 
 { 
-    if (is_const)
-    {
-        return m_const_iter == other.m_const_iter;
-    }
-    else
-    {
-        return m_iter == other.m_iter; 
-    }
+    if (is_const != other.is_const) return 0;
+    bool comp_const = m_const_iter == other.m_const_iter;
+    bool comp = m_iter == other.m_iter;
+    return is_const ? m_const_iter == other.m_const_iter : m_iter == other.m_iter;
 }
 
 bool JSONObject::JSONArray::Iterator::operator!=(const Iterator& other) const 
 { 
-    if (is_const)
-    {
-        return m_const_iter == other.m_const_iter;
-    }
-    else
-    {
-        return m_iter == other.m_iter; 
-    }
+    return !(*this == other);
 }
 
 /**************************************************************************************************
