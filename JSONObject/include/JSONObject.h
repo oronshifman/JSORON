@@ -92,6 +92,8 @@ namespace JSORON
             
             template<typename T>
             void PushBack(const T& value);
+
+            void PushBack(JSONValue *value);
             
             JSONValue Erase(u64 index);
             JSONValue& At(u64 index) const;
@@ -216,6 +218,8 @@ namespace JSORON
     
         template<typename T>
         void Put(const std::string key, const T& value);
+        
+        void Put(const std::string key, JSONValue *value);
 
         /**
          * @brief adds a new json object to this json
@@ -262,7 +266,7 @@ namespace JSORON
 #endif /* NDEBUG */
         typedef std::unordered_map<std::string, JSONValue*>::iterator JSONIter;
     
-        static JSONValue bad_value;
+        static const JSONValue bad_value;
         std::unordered_map<std::string, JSONValue*> json;
         std::list<std::string> insertion_order;
     

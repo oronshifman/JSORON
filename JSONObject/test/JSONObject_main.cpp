@@ -134,11 +134,11 @@ void TestPutJSONObject(Tester& tester)
 {
     JSONObject json = CreateJson();
 
-    json.Put("hello", std::string("good bey"));
+    JSONValue *hello = new JSONValue(std::string("good bey"));
+    json.Put("hello", hello);
 
-    JSONValue& bla(json["hello"]);
-    std::string hello(json["hello"]);
-    tester.AssertEqual(hello, std::string("good bey"), "TestPutJSONObject", __LINE__);
+    std::string hello_str(json["hello"]);
+    tester.AssertEqual(hello_str, std::string("good bey"), "TestPutJSONObject", __LINE__);
 }
 
 int main(int argc, char *argv[])

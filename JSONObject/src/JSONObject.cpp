@@ -100,6 +100,11 @@ JSONObject::JSONArray::~JSONArray()
     array.clear();
 }
 
+void JSONObject::JSONArray::PushBack(JSONValue *value)
+{
+    array.push_back(value);
+}
+
 JSONObject::JSONValue JSONObject::JSONArray::Erase(u64 index)
 {
     assert(index < array.size());
@@ -146,7 +151,7 @@ JSONObject::JSONArray::Iterator JSONObject::JSONArray::end()
  * 
  **************************************************************************************************/
 
-JSONObject::JSONValue JSONObject::bad_value(JSONObject::ValueType::BAD_TYPE);
+const JSONObject::JSONValue JSONObject::bad_value(JSONObject::ValueType::BAD_TYPE);
 
 JSONObject::JSONValue::JSONValue(const JSONValue &value)
 {
@@ -453,6 +458,15 @@ JSONObject::~JSONObject()
     }
     json.clear();
     insertion_order.clear();
+}
+
+void JSONObject::Put(const std::string key, JSONValue *value)
+{
+    auto res = json.insert({key, value});
+    if (res.second)
+    {
+        insertion_order.push_back(key);
+    }
 }
 
 JSONObject& JSONObject::AddObj(const std::string &key)
