@@ -99,4 +99,3 @@ namespace JSORON
 }
 
 #endif /* JSONPARSER_H */
-

@@ -14,6 +14,12 @@
 
 namespace JSORON
 {
+    
+/**************************************************************************************************
+ * 
+ *  JSONArray::Iterator
+ * 
+ **************************************************************************************************/
 
 JSONObject::JSONValue& JSONObject::JSONArray::Iterator::operator*() const 
 {
@@ -72,6 +78,12 @@ bool JSONObject::JSONArray::Iterator::operator!=(const Iterator& other) const
     }
 }
 
+/**************************************************************************************************
+ * 
+ *  JSONArray
+ * 
+ **************************************************************************************************/
+
 JSONObject::JSONArray::JSONArray(const JSONObject::JSONArray& other)
 {
     array.assign(other.array.begin(), other.array.end());
@@ -127,6 +139,12 @@ JSONObject::JSONArray::Iterator JSONObject::JSONArray::end()
 {
     return Iterator(array.end());
 }
+
+/**************************************************************************************************
+ * 
+ *  JSONValue
+ * 
+ **************************************************************************************************/
 
 JSONObject::JSONValue JSONObject::bad_value(JSONObject::ValueType::BAD_TYPE);
 
@@ -395,6 +413,12 @@ JSONObject::JSONValue::~JSONValue()
     }
 }
 
+/**************************************************************************************************
+ * 
+ *  JSONObject
+ * 
+ **************************************************************************************************/
+
 JSONObject::JSONObject(const JSONObject& other) : insertion_order(other.insertion_order)
 {
     for (auto& pair : other.json)
@@ -430,7 +454,6 @@ JSONObject::~JSONObject()
     json.clear();
     insertion_order.clear();
 }
-
 
 JSONObject& JSONObject::AddObj(const std::string &key)
 {

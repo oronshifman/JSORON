@@ -92,7 +92,7 @@ namespace JSORON
             
             template<typename T>
             void PushBack(const T& value);
-
+            
             JSONValue Erase(u64 index);
             JSONValue& At(u64 index) const;
 
@@ -216,7 +216,7 @@ namespace JSORON
     
         template<typename T>
         void Put(const std::string key, const T& value);
-    
+
         /**
          * @brief adds a new json object to this json
          * @param key the key for the new json object

@@ -45,18 +45,6 @@ JSONObject CreateJson()
     return json;
 }
 
-void TestJSONArray(Tester& tester)
-{
-    JSONObject obj = CreateJson();
-    JSONArray arr = obj["ArrayOfJsons"];
-
-    for (auto& num : arr)
-    {
-        int x = num["num"];
-        std::cout << x << " ";
-    }
-}
-
 void TestObjectCopyCtor(Tester& tester)
 {
     JSONObject json1 = CreateJson();
@@ -142,21 +130,34 @@ void TestJSONArrayIterator(Tester& tester)
     }
 }
 
+void TestPutJSONObject(Tester& tester)
+{
+    JSONObject json = CreateJson();
+
+    json.Put("hello", std::string("good bey"));
+
+    JSONValue& bla(json["hello"]);
+    std::string hello(json["hello"]);
+    tester.AssertEqual(hello, std::string("good bey"), "TestPutJSONObject", __LINE__);
+}
+
 int main(int argc, char *argv[])
 {
 	Tester tester;
     
-    // TestOperatorSquareBrackets(tester);
+    TestOperatorSquareBrackets(tester);
 
-    // TestObjectCopyCtor(tester);
+    TestObjectCopyCtor(tester);
 
-    // TestObjectCopyAssignment(tester);
+    TestObjectCopyAssignment(tester);
 
-    // TestJSONValueCopyAssignment(tester);
+    TestJSONValueCopyAssignment(tester);
     
-    // TestJSONValueCasting(tester);
+    TestJSONValueCasting(tester);
 
-    TestJSONArray(tester);
+    TestJSONArrayIterator(tester);
+
+    TestPutJSONObject(tester);
 
     tester.TestAll();
 
