@@ -283,6 +283,7 @@ void InitSimpleJson2()
     JSONObject nested_json;
     nested_json.Put("intKey", 2);
     simple_json2.Put("nestedJson", nested_json);
+    simple_json2.Put("intKey", 42);
 }
 
 void InitSimpleJson3()

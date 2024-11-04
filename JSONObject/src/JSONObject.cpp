@@ -503,8 +503,8 @@ bool operator==(const JSONObject::JSONArray& lhs, const JSONObject::JSONArray& r
         return 1;
     }
     
-    for (auto lhs_iter = lhs.array.begin(), rhs_iter = rhs.array.begin();
-         lhs_iter != lhs.array.end() && rhs_iter != rhs.array.end();
+    for (JSONArray::Iterator lhs_iter = lhs.begin(), rhs_iter = rhs.begin();
+         lhs_iter != lhs.end() && rhs_iter != rhs.end();
          ++lhs_iter, ++rhs_iter)
     {
         if (*lhs_iter != *rhs_iter)

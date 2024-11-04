@@ -69,8 +69,8 @@ namespace JSORON
     public:
         typedef std::list<Token> TokenList;
            
-        JSONObject Parse(const std::string& json_str);
-        JSONObject Parse(std::ifstream& json_file); 
+        JSONObject& Parse(const std::string& json_str);
+        JSONObject& Parse(std::ifstream& json_file); 
         
         friend bool operator==(const JSONParser& lhs, const JSONParser& rhs);
         friend bool operator!=(const JSONParser& lhs, const JSONParser& rhs);
@@ -90,10 +90,11 @@ namespace JSORON
         b8 IsEndOfObj(const Token& tok);
         b8 IsEndOfArr(const Token& tok);
 
-        JSONObject::JSONValue _Parse();
-        JSONObject::JSONValue ParseObj();
-        JSONObject::JSONValue ParseArray();
+        JSONObject::JSONValue *_Parse();
+        JSONObject::JSONValue *ParseObj();
+        JSONObject::JSONValue *ParseArray();
 
+        TokenList::iterator curr_tok;
         TokenList tokens;
     };
 }
