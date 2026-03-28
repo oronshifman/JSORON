@@ -27,14 +27,15 @@ namespace JSORON
         {
             NULL_TYPE,
     
-            KEY,
-            
+            BOOL,
             INT,
             DOUBLE,
             STR,
             JSON_OBJECT,
     
             ARR,
+
+            BAD_TYPE,
     
             NUM_JSON_TYPES
         };
@@ -45,6 +46,7 @@ namespace JSORON
         public:
             JSONArray() : array() {}
             JSONArray(const JSONArray& other);
+            JSONArray(JSONArray&& other) : array(std::move(other.array)) {}
             JSONArray& operator=(const JSONArray& other);
 
             ~JSONArray();
@@ -112,17 +114,20 @@ namespace JSORON
             };
 
             u64 Size() const;
-            
+
             template<typename T>
             void PushBack(const T& value);
 
             void PushBack(JSONValue *value);
-            
+
             Iterator Erase(u64 index);
             Iterator Erase(Iterator pos);
-            // TODO: fix that At for a const JSONArray return a const reference
-            // TODO: add an api for At for non const JSONArray
-            JSONValue& At(u64 index) const;
+
+            JSONValue& At(u64 index);
+            const JSONValue& At(u64 index) const;
+
+            JSONValue& operator[](u64 index);
+            const JSONValue& operator[](u64 index) const;
 
             ConstIterator begin() const;
             ConstIterator end() const;
@@ -138,66 +143,81 @@ namespace JSORON
 
             ValueArray array;
         };
-        
+
         class JSONValue 
         {
         public:
             ValueType type;
-    
+
             union
             {
+                b8 bool_val;
                 s32 int_val;
                 f64 double_val;
-                std::string str_val;
+                std::string_view str_val;
+                // TODO: Add an std::string member to support assigning new values to a JSONValue of type STR
+                // With std::string_view, the std::string_view is pointing into the source buffer and it's value
+                // cannot be modified. So i need to add a std::string member to the union so when the use trys to assign a new 
+                // value to the JSONValue i will be assigned to the std::string. There will need to be some flag that
+                // let's me know whther this STR is a modified one and so using the std::string of an original one that
+                // uses the std::string_view.
                 JSONObject *json_val;
-    
+
                 JSONArray json_arr;
             };
-    
+
             JSONValue() : type(ValueType::NULL_TYPE) {}
             JSONValue(const JSONValue& value);
             JSONValue& operator=(const JSONValue& other);
-            
+
             template<typename T>
             JSONValue& operator=(const T& src);
 
             ~JSONValue();
-    
+
             JSONValue(const ValueType& type) : type(type) {}
-    
-            JSONValue(const ValueType type, const std::string& key) : type(type), str_val(key) {}
+
+            JSONValue(const ValueType type, std::string_view key) : type(type), str_val(key) {}
+            JSONValue(const b8 value) : type(ValueType::BOOL), bool_val(value) {}
             JSONValue(const s32 value) : type(ValueType::INT), int_val(value) {}
             JSONValue(const f64 value) : type(ValueType::DOUBLE), double_val(value) {}
-            JSONValue(const std::string& value) : type(ValueType::STR), str_val(value) {}
-            JSONValue(const JSONObject* value);
+            JSONValue(std::string_view value) : type(ValueType::STR), str_val(value) {}
+            JSONValue(JSONObject* value) : type(ValueType::JSON_OBJECT), json_val(value) {}
             JSONValue(const JSONObject& value);
-    
+
             JSONValue(const JSONArray& arr) : type(ValueType::ARR), json_arr(arr) {}
-            
+            JSONValue(JSONArray&& arr) : type(ValueType::ARR), json_arr(std::move(arr)) {}
+
             /**
              * @brief overloading cast to int.
              * @throw bad_cast
              */
             operator int&();
-            
+
             /**
              * @brief overloading cast to double.
              * @throw bad_cast
              */
             operator double&();
-           
+
             /**
              * @brief overloading cast to string.
              * @throw bad_cast
              */
-            operator std::string&();
-          
+            operator std::string();
+            
+            /**
+             * @brief overloading cast to string_view.
+             * @throw bad_cast
+             */
+            operator std::string_view();
+
             /**
              * @brief overloading cast to JSONObject.
              * @throw bad_cast
              */
             operator JSONObject&();
-         
+
             /**
              * @brief overloading cast to JSONArray.
              * @throw bad_cast
@@ -209,44 +229,51 @@ namespace JSORON
              * @throw bad_cast
              */
             operator const int&() const;
-            
+
             /**
              * @brief overloading cast to double.
              * @throw bad_cast
              */
             operator const double&() const;
-           
+
             /**
-             * @brief overloading cast to string.
+             * @brief const overload, casts the value to std::string.
+             * @return a copy of the stored string value
+             * @throw std::bad_cast if the value type is not STR
+             */
+            operator std::string() const;
+
+            /**
+             * @brief overloading cast to string_view.
              * @throw bad_cast
              */
-            operator const std::string&() const;
-          
+            operator std::string_view() const;
+
             /**
              * @brief overloading cast to JSONObject.
              * @throw bad_cast
              */
             operator const JSONObject&() const;
-         
+
             /**
              * @brief overloading cast to JSONArray.
              * @throw bad_cast
              */
             operator const JSONArray&() const;
-        
-            JSONValue operator[](u64 key);
+
+            JSONValue& At(u64 index);
+            const JSONValue& At(u64 index) const;
+            JSONValue& At(const std::string_view key);
+            const JSONValue& At(const std::string_view key) const;
+
+            JSONValue& operator[](u64 key);
 
             /**
              * @brief for accessing keys from a nested json
              * @return JSONValue with the nested JSONObject
              */
-            JSONValue& operator[](std::string key);
-            
-            /**
-             * @brief for accessing keys from a nested json
-             * @return JSONValue with the nested JSONObject
-             */
-            JSONValue& operator[](const char* key);
+            JSONValue& operator[](std::string_view key);
+            JSONValue& operator[](const char *key);
             
             void PrintValueByType(u8 indent, std::ostream& out) const;
             void AssignValueByType(const JSONValue& src);
@@ -271,17 +298,27 @@ namespace JSORON
          * @return a reference to the associated JSONValue
          * @throws std::out_of_range if the key is not found
          */
-        JSONValue& At(const std::string& key);
-        const JSONValue& At(const std::string& key) const;
+        JSONValue& At(const std::string_view key);
+        const JSONValue& At(const std::string_view key) const;
     
-        void Remove(std::string key);
+        /**
+         * @brief removes the key-value pair associated with the given key
+         * @param key the key to remove
+         * @note no-op if the key does not exist
+         */
+        void Remove(std::string_view key)
+
+        // TODO: add doc
+        void Parse(std::ifstream& json_file);
+        // TODO: add doc
+        void Parse(const std::string& json_str);
        
         /**
          * @brief access or insert a value in the json object
          * @param key the key to look up or create
          * @return a reference to the existing value, or a newly inserted null-type JSONValue
          */
-        JSONValue& operator[](std::string key);
+        JSONValue& operator[](std::string_view key);
 
         friend class JSONParser;
 
@@ -293,17 +330,18 @@ namespace JSORON
 #ifdef NDEBUG 
     private:
 #endif /* NDEBUG */
-        typedef std::unordered_map<std::string, JSONValue*>::iterator JSONIter;
-    
-        std::unordered_map<std::string, JSONValue*> json;
-        std::list<std::string> insertion_order;
-    
+        typedef std::unordered_map<std::string_view, JSONValue*>::iterator JSONIter;
+
+        std::unordered_map<std::string_view, JSONValue*> json;
+        std::list<std::string_view> insertion_order;
+        std::string source_buffer;
+
         void DeepCopyFrom(const JSONObject& other);
         void DeleteAllJson(void);
 
         void RecPrint(u8 indent, std::ostream& out) const;
     };
-    
+
     typedef JSONObject::JSONArray JSONArray;    
     typedef JSONObject::JSONValue JSONValue;    
 

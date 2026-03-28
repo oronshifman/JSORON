@@ -1,6 +1,6 @@
 TARGET = JSONObject
 
-OBJS = src/JSONObject.o test/JSONObject_main.o
+OBJS = src/JSONObject.o test/JSONObject_main.o ../../profiler/src/profiler.o
 
 TEST=../../utils/generic_test.o
 
@@ -27,7 +27,6 @@ debug: CXXFLAGS+=$(DEBUG_FLAG)
 debug: $(DEBUG_BIN)
 
 profiled: CXXFLAGS+=$(PROFILED_FLAGS)
-profiled: OBJS+=../../profiler/src/profiler.o
 profiled: $(PROFILED_BIN)
 
 $(DEBUG_BIN): $(OBJS) $(TEST)

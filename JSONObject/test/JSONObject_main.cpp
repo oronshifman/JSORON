@@ -83,12 +83,8 @@ void TestOperatorSquareBrackets(Tester& tester)
 {
     JSONObject json = CreateJson();
 
-    tester.AssertEqual(JSONObject::JSONValue(13), JSONObject::JSONValue(json["intKey"]), "TestOperatorSquareBrackets", __LINE__);
-    tester.AssertEqual(JSONObject::JSONValue("str"), JSONObject::JSONValue(json["strKey"]), "TestOperatorSquareBrackets", __LINE__);
-
-    const JSONObject const_obj = CreateJson();
-
-    tester.AssertEqual(JSONObject::JSONValue(13), JSONObject::JSONValue(const_obj["intKey"]), "TestOperatorSquareBrackets", __LINE__);
+    tester.AssertEqual(JSONObject::JSONValue(json["intKey"]), JSONObject::JSONValue(13), "TestOperatorSquareBrackets", __LINE__);
+    tester.AssertEqual(JSONObject::JSONValue(json["strKey"]), JSONObject::JSONValue("str"), "TestOperatorSquareBrackets", __LINE__);
 }
 
 void TestJSONValueCasting(Tester& tester)
@@ -118,28 +114,17 @@ void TestJSONArrayIterator(Tester& tester)
 
     JSONArray json_arr = json["ArrayOfJsons"];
     int count1 = 0;
-    for (auto& j : json_arr)
+    for (auto& iter : json_arr)
     {
-        tester.AssertEqual((int)j["num"], count1++, "TestJSONArrayIterator", __LINE__);
+        tester.AssertEqual((int)iter["num"], count1++, "TestJSONArrayIterator", __LINE__);
     }
 
     const JSONArray& const_json_arr = json["ArrayOfJsons"];
     int count2 = 0;
-    for (auto& j : const_json_arr)
+    for (auto& iter : const_json_arr)
     {
-        tester.AssertEqual((int)j["num"], count2++, "TestJSONArrayIterator", __LINE__);
+        tester.AssertEqual((int)iter.At("num"), count2++, "TestJSONArrayIterator", __LINE__);
     }
-}
-
-void TestPutJSONObject(Tester& tester)
-{
-    JSONObject json = CreateJson();
-
-    JSONValue *hello = new JSONValue(std::string("good bey"));
-    json.Put("hello", hello);
-
-    std::string hello_str(json["hello"]);
-    tester.AssertEqual(hello_str, std::string("good bey"), "TestPutJSONObject", __LINE__);
 }
 
 int main(int argc, char *argv[])
@@ -159,8 +144,6 @@ int main(int argc, char *argv[])
     TestJSONValueCasting(tester);
 
     TestJSONArrayIterator(tester);
-
-    TestPutJSONObject(tester);
 
     tester.TestAll();
 

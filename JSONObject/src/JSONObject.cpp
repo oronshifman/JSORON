@@ -6,8 +6,10 @@
 
 #include <ostream>
 #include <string>
+#include <cstring>
 #include <iostream>
 #include <algorithm>
+#include <charconv>
 #include <assert.h>
 
 #include "JSONObject.h"
@@ -66,11 +68,26 @@ JSONObject::JSONArray::Iterator JSONObject::JSONArray::Erase(Iterator pos)
     return Iterator(iter);
 }
 
-JSONObject::JSONValue& JSONObject::JSONArray::At(u64 index) const
+JSONObject::JSONValue& JSONObject::JSONArray::At(u64 index)
+{
+    return const_cast<JSONValue&>(static_cast<const JSONArray&>(*this).At(index));
+}
+
+const JSONObject::JSONValue& JSONObject::JSONArray::At(u64 index) const
 {
     assert(index < array.size());
     
     return *array[index];
+}
+
+JSONObject::JSONValue& JSONObject::JSONArray::operator[](u64 index)
+{
+    return (*this).At(index);
+}
+
+const JSONObject::JSONValue& JSONObject::JSONArray::operator[](u64 index) const
+{
+    return (*this).At(index);
 }
 
 u64 JSONObject::JSONArray::Size() const
@@ -121,19 +138,14 @@ void JSONObject::JSONArray::DeepCopyFrom(const JSONArray& other)
  *  JSONValue
  * 
  **************************************************************************************************/
-JSONObject::JSONValue::JSONValue(const JSONValue &value)
+JSONObject::JSONValue::JSONValue(const JSONValue& value)
 {
     AssignValueByType(value);
 }
 
-JSONObject::JSONValue::JSONValue(const JSONObject &value) : type(ValueType::JSON_OBJECT)
+JSONObject::JSONValue::JSONValue(const JSONObject& value) : type(ValueType::JSON_OBJECT)
 {
     json_val = new JSONObject(value);
-}
-
-JSONObject::JSONValue::JSONValue(const JSONObject *value) : type(ValueType::JSON_OBJECT)
-{
-    json_val = new JSONObject(*value);
 }
 
 JSONObject::JSONValue& JSONObject::JSONValue::operator=(const JSONValue& other)
@@ -171,7 +183,19 @@ JSONObject::JSONValue::operator double&()
     }
 }
 
-JSONObject::JSONValue::operator std::string&()
+JSONObject::JSONValue::operator std::string()
+{
+    if (type == JSONObject::ValueType::STR)
+    {
+        return std::string(str_val);
+    }
+    else
+    {
+        throw std::bad_cast();
+    }
+}
+
+JSONObject::JSONValue::operator std::string_view()
 {
     if (type == JSONObject::ValueType::STR)
     {
@@ -230,7 +254,19 @@ JSONObject::JSONValue::operator const double&() const
     }
 }
 
-JSONObject::JSONValue::operator const std::string&() const
+JSONObject::JSONValue::operator std::string() const
+{
+    if (type == JSONObject::ValueType::STR)
+    {
+        return std::string(str_val);
+    }
+    else
+    {
+        throw std::bad_cast();
+    }
+}
+
+JSONObject::JSONValue::operator std::string_view() const
 {
     if (type == JSONObject::ValueType::STR)
     {
@@ -266,27 +302,42 @@ JSONObject::JSONValue::operator const JSONArray&() const
     }
 }
 
-JSONObject::JSONValue JSONObject::JSONValue::operator[](u64 index)
+JSONObject::JSONValue& JSONObject::JSONValue::At(u64 index)
 {
-    switch (type)
-    {
-        case JSONObject::ValueType::ARR:
-            return json_arr.At(index);
-
-        default:
-            return *this;
-    }
+    return const_cast<JSONValue&>(static_cast<const JSONValue&>(*this).At(index));
 }
 
-JSONObject::JSONValue& JSONObject::JSONValue::operator[](std::string key)
+const JSONObject::JSONValue& JSONObject::JSONValue::At(u64 index) const
+{
+    assert(type == JSONObject::ValueType::ARR);
+    return json_arr.At(index);
+}
+
+JSONObject::JSONValue& JSONObject::JSONValue::At(const std::string_view key)
+{
+    return const_cast<JSONValue&>(static_cast<const JSONValue&>(*this).At(key));
+}
+
+const JSONObject::JSONValue& JSONObject::JSONValue::At(const std::string_view key) const
+{
+    assert(type == JSONObject::ValueType::JSON_OBJECT);
+    return json_val->At(key);
+}
+
+JSONObject::JSONValue& JSONObject::JSONValue::operator[](u64 index)
+{
+    return (*this).At(index);
+}
+
+JSONObject::JSONValue& JSONObject::JSONValue::operator[](std::string_view key)
 {
     assert(type == JSONObject::ValueType::JSON_OBJECT);
     return json_val->operator[](key);
 }
 
-JSONObject::JSONValue& JSONObject::JSONValue::operator[](const char* key)
+JSONObject::JSONValue& JSONObject::JSONValue::operator[](const char *key)
 {
-    return (*this)[std::string(key)];
+    return (*this)[std::string_view(key)];
 }
 
 void JSONObject::JSONValue::PrintValueByType(u8 indent, std::ostream& out) const
@@ -337,12 +388,6 @@ void JSONObject::JSONValue::DestroyCurrentValue(void)
 {
     switch (this->type)
     {   
-        case JSONObject::ValueType::STR:
-        case JSONObject::ValueType::KEY:
-        {
-            str_val.~basic_string();
-        } break;
-
         case JSONObject::ValueType::JSON_OBJECT:
         {
             delete this->json_val;
@@ -353,6 +398,8 @@ void JSONObject::JSONValue::DestroyCurrentValue(void)
             json_arr.~JSONArray();
         } break;
         
+        case JSONObject::ValueType::STR:
+        case JSONObject::ValueType::KEY:
         case JSONObject::ValueType::NULL_TYPE:
         case JSONObject::ValueType::INT:
         case JSONObject::ValueType::DOUBLE:
@@ -379,16 +426,11 @@ void JSONObject::JSONValue::AssignValueByType(const JSONValue& src)
             double_val = src.double_val;
         } break;
 
+        case JSONObject::ValueType::KEY:
         case JSONObject::ValueType::STR:
         {
             type = ValueType::STR;
-            new (&str_val) std::string(src.str_val);
-        } break;
-
-        case JSONObject::ValueType::KEY:
-        {
-            type = ValueType::KEY;
-            new (&str_val) std::string(src.str_val);
+            str_val = src.str_val;
         } break;
 
         case JSONObject::ValueType::JSON_OBJECT:
@@ -426,6 +468,11 @@ JSONObject::JSONValue::~JSONValue()
 JSONObject::JSONObject(const JSONObject& other) : insertion_order(other.insertion_order)
 {
     DeepCopyFrom(other);
+}
+
+JSONObject::JSONObject(JSONObject *other)
+{
+    *this = *other;
 }
 
 JSONObject& JSONObject::operator=(const JSONObject& other)
@@ -467,22 +514,22 @@ void JSONObject::DeleteAllJson(void)
     json.clear();
 }
 
-JSONObject::JSONValue& JSONObject::At(const std::string& key)
+JSONObject::JSONValue& JSONObject::At(const std::string_view key)
 {
     return const_cast<JSONValue&>(static_cast<const JSONObject&>(*this).At(key));
 }
 
-const JSONObject::JSONValue& JSONObject::At(const std::string& key) const
+const JSONObject::JSONValue& JSONObject::At(const std::string_view key) const
 {
     auto value = json.find(key);
     if (value == json.end())
     {
-        throw std::out_of_range("Key not found: " + key);
+        throw std::out_of_range("Key not found: " + std::string(key));
     }
     return *(value->second);
 }
 
-void JSONObject::Remove(std::string key)
+void JSONObject::Remove(std::string_view key)
 {
     auto iter = json.find(key);
     if (iter == json.end()) return;
@@ -492,7 +539,197 @@ void JSONObject::Remove(std::string key)
     insertion_order.remove(key);
 }
 
-JSONObject::JSONValue& JSONObject::operator[](std::string key)
+void JSONObject::Parse(std::ifstream& json_file)
+{
+
+}
+
+static void SkipWhitespace(const std::string& buf, u32& pos)
+{
+    while (std::isspace(buf[pos])) 
+    {
+        ++pos;
+    }
+}
+
+// {"num": 42, "name": "oron", "double": 42.42}
+
+// {
+//   "pairs":
+//     [{"x0":-24.136337,"y0":75.754684,"x1":-127.218956,"y1":-25.416527},
+//      {"x0":25.535736,"y0":-43.788517,"x1":-67.682999,"y1":82.133118},
+//      {"x0":-108.825356,"y0":-80.391953,"x1":93.193268,"y1":-5.138481},
+//      {"x0":150.926361,"y0":63.822083,"x1":-58.930611,"y1":72.343033}]
+// }
+void JSONObject::Parse(const std::string& json_str)
+{
+    source_buffer = json_str;
+
+    u32 pos = 0;
+    SkipWhitespace(source_buffer, pos);
+    if (source_buffer[pos] == '{')
+    {
+        ++pos; // skip opening {
+        ParseObj(source_buffer, pos, *this);
+    }
+}
+
+// TODO: add doc
+static void ParseObj(const std::string& buf, u32& pos, JSONObject& obj)
+{
+    while (buf[pos] != '}')
+    {
+        SkipWhitespace(buf, pos);
+        
+        std::string_view key = ParseStr(buf, pos);
+
+        SkipWhitespace(buf, pos);
+        ++pos; // skip :
+        SkipWhitespace(buf, pos);
+
+        JSONValue *val = ParseVal(buf, pos);
+
+        obj.json.insert({key, val});
+        obj.insertion_order.push_back(key);
+
+        SkipWhitespace(buf, pos);
+        ++pos; // skip ,
+        SkipWhitespace(buf, pos);
+    }
+    ++pos; // TODO: do i really need this???
+}
+
+// TODO: add doc
+static void ParseArr(const std::string& buf, u32& pos, JSONArray& arr)
+{
+    while (buf[pos] != ']')
+    {
+        SkipWhitespace(buf, pos);
+
+        
+    }
+}
+
+// {"num": 42, "name": "oron", "double": -42.42}
+
+// {
+//   "pairs":
+//     [{"x0":-24.136337,"y0":75.754684,"x1":-127.218956,"y1":-25.416527},
+//      {"x0":25.535736,"y0":-43.788517,"x1":-67.682999,"y1":82.133118},
+//      {"x0":-108.825356,"y0":-80.391953,"x1":93.193268,"y1":-5.138481},
+//      {"x0":150.926361,"y0":63.822083,"x1":-58.930611,"y1":72.343033}]
+// }
+// TODO: add doc
+static JSONValue *ParseVal(const std::string& buf, u32& pos)
+{
+    switch (buf[pos])
+    {
+        case '{':
+        {
+            JSONObject *obj = new JSONObject();
+            ++pos; // skip {
+            ParseObj(buf, pos, *obj);
+            return new JSONValue(obj);
+        } break;
+
+        case '[':
+        {
+            JSONArray arr;
+            ++pos; // skip [
+            ParseArr(buf, pos, arr); // TODO: implement this func
+            return new JSONValue(std::move(arr));
+        } break;
+
+        case '"':
+        {
+            ++pos; // skip "
+            std::string_view val = ParseStr(buf, pos);
+            return new JSONValue(val);
+        } break;
+
+        default:
+        {
+            if (std::isdigit(buf[pos]) || buf[pos] == '-')
+            {
+                return ParseNum(buf, pos);
+            } 
+
+            if (std::isalpha(buf[pos]))
+            {
+                return ParseTFN(buf, pos);
+            }
+        } break;
+    }
+
+}
+
+// TODO: add doc
+static JSONValue *ParseNum(const std::string& buf, u32& pos)
+{
+    u32 start = pos;
+    
+    if (buf[pos] == '-') ++pos;
+    while (std::isdigit(buf[pos])) ++pos;
+
+    b8 is_float = 0;
+    if (buf[pos] == '.')
+    {
+        is_float = 1;
+        ++pos;
+        while (std::isdigit(buf[pos])) ++pos;
+    }
+
+    if (is_float)
+    {
+        f64 new_float;
+        std::from_chars(&buf[start], &buf[pos], new_float);
+        return new JSONValue(new_float);
+    }
+    else 
+    {
+        s32 new_int;
+        std::from_chars(&buf[start], &buf[pos], new_int);
+        return new JSONValue(new_int);
+    }
+}
+
+// TODO: add doc
+static JSONValue *ParseTFN(const std::string& buf, u32& pos)
+{
+    u32 start = pos;
+    while (std::isalpha(buf[pos])) ++pos;
+
+    std::string_view value(&buf[start], pos - start);
+
+    if (value == "null")
+    {
+        return new JSONValue();
+    }
+    else if (value == "false")
+    {
+        return new JSONValue((b8)0);
+    }
+    else if (value == "true")
+    {
+        return new JSONValue((b8)1);
+    }
+
+    return new JSONValue(JSONObject::ValueType::BAD_TYPE);
+}
+
+// TODO: add doc
+static std::string_view ParseStr(const std::string& buf, u32& pos)
+{
+    u32 start = pos;
+    while (buf[pos] != '"') ++pos;
+
+    std::string_view key(&buf[start], pos - start);
+    ++pos; // skip closing "
+
+    return key;
+}
+
+JSONObject::JSONValue& JSONObject::operator[](std::string_view key)
 {
     try {
         return this->At(key);
@@ -637,11 +874,14 @@ std::ostream& operator<<(std::ostream& out, const JSONObject::JSONValue& value)
 
 void JSONObject::RecPrint(u8 indent, std::ostream& out) const
 {
-    for (std::string key : insertion_order)
+    char tabs[256];
+    for (std::string_view key : insertion_order)
     {
         const JSONObject::JSONValue* value = json.at(key);
 
-        out << std::string(indent, '\t') << "\"" + key + "\": ";
+        memset(tabs, '\t', indent);
+        out.write(tabs, indent);
+        out << "\"" << key << "\": ";
         value->PrintValueByType(indent, out);
     }
 }
