@@ -37,6 +37,7 @@ JSONObject::JSONArray& JSONObject::JSONArray::operator=(const JSONObject::JSONAr
     }
 
     DeleteAll();
+    DeepCopyFrom(other);
     return *this;
 }
 
@@ -160,70 +161,41 @@ JSONObject::JSONValue& JSONObject::JSONValue::operator=(const JSONValue& other)
     return *this;
 }
 
+JSONObject::JSONValue::operator bool&()
+{
+    return const_cast<bool&>(static_cast<const JSONValue&>(*this).operator const bool&());
+}
+
 JSONObject::JSONValue::operator int&()
 {
-    if (type == JSONObject::ValueType::INT)
-    {
-        return int_val;
-    }
-    else
-    {
-        throw std::bad_cast();
-    }
+    return const_cast<int&>(static_cast<const JSONValue&>(*this).operator const int&());
 }
 
 JSONObject::JSONValue::operator double&()
 {
-    if (type == JSONObject::ValueType::DOUBLE)
-    {
-        return double_val;
-    } else
-    {
-        throw std::bad_cast();
-    }
+    return const_cast<double&>(static_cast<const JSONValue&>(*this).operator const double&());
 }
 
-JSONObject::JSONValue::operator std::string()
+JSONObject::JSONValue::operator std::string&()
 {
-    if (type == JSONObject::ValueType::STR)
-    {
-        return std::string(str_val);
-    }
-    else
-    {
-        throw std::bad_cast();
-    }
-}
-
-JSONObject::JSONValue::operator std::string_view()
-{
-    if (type == JSONObject::ValueType::STR)
-    {
-        return str_val;
-    }
-    else
-    {
-        throw std::bad_cast();
-    }
+    // TODO: implement
 }
 
 JSONObject::JSONValue::operator JSONObject&()
 {
-    if (type == JSONObject::ValueType::JSON_OBJECT)
-    {
-        return *json_val;
-    }
-    else
-    {
-        throw std::bad_cast();
-    }
+    return const_cast<JSONObject&>(static_cast<const JSONValue&>(*this).operator const JSONObject&());
 }
 
 JSONObject::JSONValue::operator JSONArray&()
 {
-    if (type == JSONObject::ValueType::ARR)
+    return const_cast<JSONArray&>(static_cast<const JSONValue&>(*this).operator const JSONArray&());
+}
+
+JSONObject::JSONValue::operator const bool&() const
+{
+    if (type == JSONObject::ValueType::BOOL)
     {
-        return json_arr;
+        return bool_val;
     }
     else
     {
@@ -249,18 +221,6 @@ JSONObject::JSONValue::operator const double&() const
     {
         return double_val;
     } else
-    {
-        throw std::bad_cast();
-    }
-}
-
-JSONObject::JSONValue::operator std::string() const
-{
-    if (type == JSONObject::ValueType::STR)
-    {
-        return std::string(str_val);
-    }
-    else
     {
         throw std::bad_cast();
     }
@@ -342,46 +302,55 @@ JSONObject::JSONValue& JSONObject::JSONValue::operator[](const char *key)
 
 void JSONObject::JSONValue::PrintValueByType(u8 indent, std::ostream& out) const
 {
-        switch (type)
+    switch (type)
+    {
+        case JSONObject::ValueType::NULL_TYPE:
         {
-            case JSONObject::ValueType::INT:
-            {
-                out << int_val << "\n";
-            } break;
+            out << "null" << "\n";
+        } break;
 
-            case JSONObject::ValueType::DOUBLE:
-            {
-                out << double_val << "\n";
-            } break;
+        case JSONObject::ValueType::BOOL:
+        {
+            out << (bool_val ? "true" : "false") << "\n";
+        } break;
 
-            case JSONObject::ValueType::STR:
-            {
-                out << "\"" << str_val << "\"" << "\n";
-            } break;
+        case JSONObject::ValueType::INT:
+        {
+            out << int_val << "\n";
+        } break;
 
-            case JSONObject::ValueType::JSON_OBJECT:
-            {
-                out << "{\n";
-                json_val->RecPrint(indent + 1, out);
-                out << std::string(indent, '\t') << "}\n";
-            } break;
+        case JSONObject::ValueType::DOUBLE:
+        {
+            out << double_val << "\n";
+        } break;
 
-            case JSONObject::ValueType::ARR:
-            {
-                out << "[";
-                for (u64 index = 0; index < json_arr.Size() ; ++index)
-                {
-                    out << json_arr.At(index) << 
-                           (index == json_arr.Size() - 1 ? "]" : ",");
-                }
-                out << "\n";
-            } break;
+        case JSONObject::ValueType::STR:
+        {
+            out << "\"" << str_val << "\"" << "\n";
+        } break;
 
-            case JSONObject::ValueType::KEY:
-            case JSONObject::ValueType::NULL_TYPE:
-            case JSONObject::ValueType::NUM_JSON_TYPES:
-                break;
-        }
+        case JSONObject::ValueType::JSON_OBJECT:
+        {
+            out << "{\n";
+            json_val->RecPrint(indent + 1, out);
+            out << std::string(indent, '\t') << "}\n";
+        } break;
+
+        case JSONObject::ValueType::ARR:
+        {
+            out << "[";
+            for (u64 index = 0; index < json_arr.Size() ; ++index)
+            {
+                out << json_arr.At(index) << 
+                        (index == json_arr.Size() - 1 ? "]" : ",");
+            }
+            out << "\n";
+        } break;
+
+        case JSONObject::ValueType::NULL_TYPE:
+        case JSONObject::ValueType::NUM_JSON_TYPES:
+            break;
+    }
 }
 
 void JSONObject::JSONValue::DestroyCurrentValue(void)
@@ -399,7 +368,6 @@ void JSONObject::JSONValue::DestroyCurrentValue(void)
         } break;
         
         case JSONObject::ValueType::STR:
-        case JSONObject::ValueType::KEY:
         case JSONObject::ValueType::NULL_TYPE:
         case JSONObject::ValueType::INT:
         case JSONObject::ValueType::DOUBLE:
@@ -414,6 +382,12 @@ void JSONObject::JSONValue::AssignValueByType(const JSONValue& src)
 {
     switch (src.type)
     {   
+        case JSONObject::ValueType::BOOL:
+        {
+            type = ValueType::BOOL;
+            bool_val = src.bool_val;
+        } break;
+
         case JSONObject::ValueType::INT:
         {
             type = ValueType::INT;
@@ -426,7 +400,6 @@ void JSONObject::JSONValue::AssignValueByType(const JSONValue& src)
             double_val = src.double_val;
         } break;
 
-        case JSONObject::ValueType::KEY:
         case JSONObject::ValueType::STR:
         {
             type = ValueType::STR;
@@ -468,11 +441,6 @@ JSONObject::JSONValue::~JSONValue()
 JSONObject::JSONObject(const JSONObject& other) : insertion_order(other.insertion_order)
 {
     DeepCopyFrom(other);
-}
-
-JSONObject::JSONObject(JSONObject *other)
-{
-    *this = *other;
 }
 
 JSONObject& JSONObject::operator=(const JSONObject& other)
@@ -581,6 +549,7 @@ static void ParseObj(const std::string& buf, u32& pos, JSONObject& obj)
     {
         SkipWhitespace(buf, pos);
         
+        ++pos; // skip opening "
         std::string_view key = ParseStr(buf, pos);
 
         SkipWhitespace(buf, pos);
@@ -588,12 +557,17 @@ static void ParseObj(const std::string& buf, u32& pos, JSONObject& obj)
         SkipWhitespace(buf, pos);
 
         JSONValue *val = ParseVal(buf, pos);
+        if (val->type == JSONObject::ValueType::BAD_TYPE)
+        {
+            // TODO: handle error
+        }
 
         obj.json.insert({key, val});
         obj.insertion_order.push_back(key);
 
         SkipWhitespace(buf, pos);
-        ++pos; // skip ,
+        if (buf[pos] == ',') ++pos;
+        else // TODO: error
         SkipWhitespace(buf, pos);
     }
     ++pos; // TODO: do i really need this???
@@ -653,10 +627,13 @@ static JSONValue *ParseVal(const std::string& buf, u32& pos)
             {
                 return ParseNum(buf, pos);
             } 
-
-            if (std::isalpha(buf[pos]))
+            else if (std::isalpha(buf[pos]))
             {
                 return ParseTFN(buf, pos);
+            }
+            else
+            {
+                return new JSONValue(JSONObject::ValueType::BAD_TYPE);
             }
         } break;
     }
@@ -821,8 +798,8 @@ bool operator==(const JSONObject::JSONValue& lhs, const JSONObject::JSONValue& r
 
     switch (lhs.type)
     {
-        case JSONObject::ValueType::NULL_TYPE:
-            return 1;
+        case JSONObject::ValueType::BOOL:
+            return lhs.bool_val == rhs.bool_val;
 
         case JSONObject::ValueType::INT:
             return lhs.int_val == rhs.int_val;
@@ -845,8 +822,15 @@ bool operator==(const JSONObject::JSONValue& lhs, const JSONObject::JSONValue& r
         } break;
         
         default:
-             // TODO(16.8.24): SyntaxError() type not supported
-             return 0;
+            if ((lhs.type == JSONObject::ValueType::NULL_TYPE) &&
+                (rhs.type == JSONObject::ValueType::NULL_TYPE))
+            {
+                return 1;
+            }
+            else
+            {
+                return 0;
+            }
     }
 
     return 1;

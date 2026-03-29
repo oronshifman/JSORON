@@ -151,14 +151,15 @@ namespace JSORON
 
             union
             {
-                b8 bool_val;
+                bool bool_val;
                 s32 int_val;
                 f64 double_val;
                 std::string_view str_val;
+                std::string mut_str_val;
                 // TODO: Add an std::string member to support assigning new values to a JSONValue of type STR
                 // With std::string_view, the std::string_view is pointing into the source buffer and it's value
-                // cannot be modified. So i need to add a std::string member to the union so when the use trys to assign a new 
-                // value to the JSONValue i will be assigned to the std::string. There will need to be some flag that
+                // cannot be modified. So i need to add a std::string member to the union so when the user trys to assign a new 
+                // value to the JSONValue it will be assigned to the std::string. There will need to be some flag that
                 // let's me know whther this STR is a modified one and so using the std::string of an original one that
                 // uses the std::string_view.
                 JSONObject *json_val;
@@ -178,7 +179,7 @@ namespace JSORON
             JSONValue(const ValueType& type) : type(type) {}
 
             JSONValue(const ValueType type, std::string_view key) : type(type), str_val(key) {}
-            JSONValue(const b8 value) : type(ValueType::BOOL), bool_val(value) {}
+            JSONValue(const bool value) : type(ValueType::BOOL), bool_val(value) {}
             JSONValue(const s32 value) : type(ValueType::INT), int_val(value) {}
             JSONValue(const f64 value) : type(ValueType::DOUBLE), double_val(value) {}
             JSONValue(std::string_view value) : type(ValueType::STR), str_val(value) {}
@@ -187,6 +188,12 @@ namespace JSORON
 
             JSONValue(const JSONArray& arr) : type(ValueType::ARR), json_arr(arr) {}
             JSONValue(JSONArray&& arr) : type(ValueType::ARR), json_arr(std::move(arr)) {}
+
+            /**
+             * @brief overloading cast to bool.
+             * @throw bad_cast
+             */
+            operator bool&();
 
             /**
              * @brief overloading cast to int.
@@ -201,17 +208,16 @@ namespace JSORON
             operator double&();
 
             /**
-             * @brief overloading cast to string.
-             * @throw bad_cast
+             * @brief overloading cast to mutable std::string reference.
+             * If the value is currently a string_view (zero-copy parsed state),
+             * copies it into an owned std::string, switches to the mutable string
+             * type, and returns a reference. Subsequent accesses return the
+             * mutable copy directly.
+             * @throw bad_cast if the value is not a string type.
+             * @note NOT YET IMPLEMENTED — see TODO.md step 5.
              */
-            operator std::string();
+            operator std::string&();
             
-            /**
-             * @brief overloading cast to string_view.
-             * @throw bad_cast
-             */
-            operator std::string_view();
-
             /**
              * @brief overloading cast to JSONObject.
              * @throw bad_cast
@@ -225,6 +231,12 @@ namespace JSORON
             operator JSONArray&();
 
             /**
+             * @brief overloading cast to bool.
+             * @throw bad_cast
+             */
+            operator const bool&() const;
+
+            /**
              * @brief overloading cast to int.
              * @throw bad_cast
              */
@@ -235,13 +247,6 @@ namespace JSORON
              * @throw bad_cast
              */
             operator const double&() const;
-
-            /**
-             * @brief const overload, casts the value to std::string.
-             * @return a copy of the stored string value
-             * @throw std::bad_cast if the value type is not STR
-             */
-            operator std::string() const;
 
             /**
              * @brief overloading cast to string_view.
@@ -306,7 +311,7 @@ namespace JSORON
          * @param key the key to remove
          * @note no-op if the key does not exist
          */
-        void Remove(std::string_view key)
+        void Remove(std::string_view key);
 
         // TODO: add doc
         void Parse(std::ifstream& json_file);
