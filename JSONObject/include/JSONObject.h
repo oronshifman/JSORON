@@ -30,7 +30,8 @@ namespace JSORON
             BOOL,
             INT,
             DOUBLE,
-            STR,
+            STR,            // points to str_val
+            MUT_STR,        // points to mut_str_val
             JSON_OBJECT,
     
             ARR,
@@ -46,6 +47,7 @@ namespace JSORON
         public:
             JSONArray() : array() {}
             JSONArray(const JSONArray& other);
+            JSONArray(const JSONArray& other, const char *old_base, const char *new_base);
             JSONArray(JSONArray&& other) : array(std::move(other.array)) {}
             JSONArray& operator=(const JSONArray& other);
 
@@ -138,7 +140,10 @@ namespace JSORON
             friend bool operator!=(const JSONArray& lhs, const JSONArray& rhs);
 
         private:
-            void DeepCopyFrom(const JSONArray& other);
+            template<typename T>
+            void PushBack(const T& value, const char *old_base, const char *new_base);
+
+            void DeepCopyFrom(const JSONArray& other, const char *old_base, const char *new_base);
             void DeleteAll(void);
 
             ValueArray array;
@@ -156,12 +161,6 @@ namespace JSORON
                 f64 double_val;
                 std::string_view str_val;
                 std::string mut_str_val;
-                // TODO: Add an std::string member to support assigning new values to a JSONValue of type STR
-                // With std::string_view, the std::string_view is pointing into the source buffer and it's value
-                // cannot be modified. So i need to add a std::string member to the union so when the user trys to assign a new 
-                // value to the JSONValue it will be assigned to the std::string. There will need to be some flag that
-                // let's me know whther this STR is a modified one and so using the std::string of an original one that
-                // uses the std::string_view.
                 JSONObject *json_val;
 
                 JSONArray json_arr;
@@ -169,6 +168,7 @@ namespace JSORON
 
             JSONValue() : type(ValueType::NULL_TYPE) {}
             JSONValue(const JSONValue& value);
+            JSONValue(const JSONValue& value, const char *old_base, const char *new_base);
             JSONValue& operator=(const JSONValue& other);
 
             template<typename T>
@@ -183,6 +183,7 @@ namespace JSORON
             JSONValue(const s32 value) : type(ValueType::INT), int_val(value) {}
             JSONValue(const f64 value) : type(ValueType::DOUBLE), double_val(value) {}
             JSONValue(std::string_view value) : type(ValueType::STR), str_val(value) {}
+            JSONValue(const char *value) : type(ValueType::STR), str_val(value) {}
             JSONValue(JSONObject* value) : type(ValueType::JSON_OBJECT), json_val(value) {}
             JSONValue(const JSONObject& value);
 
@@ -281,7 +282,7 @@ namespace JSORON
             JSONValue& operator[](const char *key);
             
             void PrintValueByType(u8 indent, std::ostream& out) const;
-            void AssignValueByType(const JSONValue& src);
+            void AssignValueByType(const JSONValue& src, const char *old_base, const char *new_base);
             void DestroyCurrentValue();
     
             friend bool operator==(const JSONObject& lhs, const JSONObject& rhs);
@@ -294,6 +295,7 @@ namespace JSORON
     public:
         JSONObject() : json(), insertion_order() {}
         JSONObject(const JSONObject& other);
+        JSONObject(const JSONObject& other, const char *old_base, const char *new_base);
         JSONObject& operator=(const JSONObject& obj);
         ~JSONObject();
     
@@ -313,10 +315,26 @@ namespace JSORON
          */
         void Remove(std::string_view key);
 
-        // TODO: add doc
-        void Parse(std::ifstream& json_file);
-        // TODO: add doc
-        void Parse(const std::string& json_str);
+        /**
+         * @brief parses a JSON file into this object
+         * Reads the entire file into source_buffer via seekg/tellg + resize + read,
+         * then runs the single-pass parser. All string_views in the resulting tree
+         * point into source_buffer.
+         * @param json_file an open input file stream positioned anywhere (seeked to
+         *        beginning internally). Must be open and in a good state.
+         * @return 0 on success, 1 on error (stream not open, tellg failure,
+         *         read failure, or parse error).
+         */
+        int Parse(std::ifstream& json_file);
+
+        /**
+         * @brief parses a JSON string into this object
+         * Copies the input into source_buffer, then runs the single-pass parser.
+         * All string_views in the resulting tree point into source_buffer.
+         * @param json_str the JSON text to parse
+         * @return 0 on success, 1 on parse error.
+         */
+        int Parse(const std::string& json_str);
        
         /**
          * @brief access or insert a value in the json object
@@ -324,8 +342,6 @@ namespace JSORON
          * @return a reference to the existing value, or a newly inserted null-type JSONValue
          */
         JSONValue& operator[](std::string_view key);
-
-        friend class JSONParser;
 
         friend bool operator==(const JSONObject& lhs, const JSONObject& rhs);
         friend bool operator!=(const JSONObject& lhs, const JSONObject& rhs);
@@ -341,7 +357,7 @@ namespace JSORON
         std::list<std::string_view> insertion_order;
         std::string source_buffer;
 
-        void DeepCopyFrom(const JSONObject& other);
+        void DeepCopyFrom(const JSONObject& other, const char *_old_base, const char *_new_base);
         void DeleteAllJson(void);
 
         void RecPrint(u8 indent, std::ostream& out) const;
@@ -354,6 +370,13 @@ namespace JSORON
     void JSONObject::JSONArray::PushBack(const T& value)
     {
         JSONValue *new_val = new JSONValue(value);
+        array.push_back(new_val);
+    }
+
+    template<typename T>
+    void JSONObject::JSONArray::PushBack(const T& value, const char *old_base, const char *new_base)
+    {
+        JSONValue *new_val = new JSONValue(value, old_base, new_base);
         array.push_back(new_val);
     }
 

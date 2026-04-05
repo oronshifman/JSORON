@@ -7,6 +7,7 @@
 #include <ostream>
 #include <string>
 #include <cstring>
+#include <fstream>
 #include <iostream>
 #include <algorithm>
 #include <charconv>
@@ -14,6 +15,8 @@
 
 #include "JSONObject.h"
 #include "profiler.h"
+
+#define CHECK_BUF(buf, pos, cond) ((pos) < (buf).size()) && (cond)
 
 namespace JSORON
 {
@@ -26,7 +29,12 @@ namespace JSORON
 
 JSONObject::JSONArray::JSONArray(const JSONObject::JSONArray& other)
 {
-    DeepCopyFrom(other);
+    DeepCopyFrom(other, nullptr, nullptr);
+}
+
+JSONObject::JSONArray::JSONArray(const JSONObject::JSONArray& other, const char *old_base, const char *new_base)
+{
+    DeepCopyFrom(other, old_base, new_base);
 }
 
 JSONObject::JSONArray& JSONObject::JSONArray::operator=(const JSONObject::JSONArray& other)
@@ -37,7 +45,7 @@ JSONObject::JSONArray& JSONObject::JSONArray::operator=(const JSONObject::JSONAr
     }
 
     DeleteAll();
-    DeepCopyFrom(other);
+    DeepCopyFrom(other, nullptr, nullptr);
     return *this;
 }
 
@@ -125,12 +133,22 @@ void JSONObject::JSONArray::DeleteAll(void)
     array.clear();
 }
 
-void JSONObject::JSONArray::DeepCopyFrom(const JSONArray& other)
+void JSONObject::JSONArray::DeepCopyFrom(const JSONArray& other, const char *old_base, const char *new_base)
 {
     array.reserve(other.Size());
-    for (auto& val : other)
+    if (old_base && new_base)
     {
-        PushBack(val);
+        for (auto& val : other)
+        {
+            PushBack(val, old_base, new_base);
+        }
+    }
+    else
+    {
+        for (auto& val : other)
+        {
+            PushBack(val);
+        }
     }
 }
 
@@ -141,7 +159,12 @@ void JSONObject::JSONArray::DeepCopyFrom(const JSONArray& other)
  **************************************************************************************************/
 JSONObject::JSONValue::JSONValue(const JSONValue& value)
 {
-    AssignValueByType(value);
+    AssignValueByType(value, nullptr, nullptr);
+}
+
+JSONObject::JSONValue::JSONValue(const JSONValue& value, const char *old_base, const char *new_base)
+{
+    AssignValueByType(value, old_base, new_base);
 }
 
 JSONObject::JSONValue::JSONValue(const JSONObject& value) : type(ValueType::JSON_OBJECT)
@@ -333,7 +356,10 @@ void JSONObject::JSONValue::PrintValueByType(u8 indent, std::ostream& out) const
         {
             out << "{\n";
             json_val->RecPrint(indent + 1, out);
-            out << std::string(indent, '\t') << "}\n";
+            char tabs[256];
+            memset(tabs, '\t', indent);
+            out.write(tabs, indent);
+            out << "}\n";
         } break;
 
         case JSONObject::ValueType::ARR:
@@ -347,8 +373,7 @@ void JSONObject::JSONValue::PrintValueByType(u8 indent, std::ostream& out) const
             out << "\n";
         } break;
 
-        case JSONObject::ValueType::NULL_TYPE:
-        case JSONObject::ValueType::NUM_JSON_TYPES:
+        default:
             break;
     }
 }
@@ -378,7 +403,7 @@ void JSONObject::JSONValue::DestroyCurrentValue(void)
     this->type = JSONObject::ValueType::NULL_TYPE;
 }
 
-void JSONObject::JSONValue::AssignValueByType(const JSONValue& src)
+void JSONObject::JSONValue::AssignValueByType(const JSONValue& src, const char *old_base, const char *new_base)
 {
     switch (src.type)
     {   
@@ -403,19 +428,42 @@ void JSONObject::JSONValue::AssignValueByType(const JSONValue& src)
         case JSONObject::ValueType::STR:
         {
             type = ValueType::STR;
-            str_val = src.str_val;
+            if (old_base && new_base)
+            {
+                str_val= std::string_view(
+                    new_base + (src.str_val.data() - old_base),
+                    src.str_val.size());
+            }
+            else
+            {
+                str_val = src.str_val;
+            }
         } break;
 
         case JSONObject::ValueType::JSON_OBJECT:
         {
             type = ValueType::JSON_OBJECT;
-            json_val = new JSONObject(*src.json_val);
+            if (old_base && new_base)
+            {
+                json_val = new JSONObject(*src.json_val, old_base, new_base);
+            }
+            else
+            {
+                json_val = new JSONObject(*src.json_val);
+            }
         } break;
 
         case JSONObject::ValueType::ARR:
         {
             type = ValueType::ARR;
-            new (&json_arr) JSONArray(src.json_arr);
+            if (old_base && new_base)
+            {
+                new (&json_arr) JSONArray(src.json_arr, old_base, new_base);
+            }
+            else
+            {
+                new (&json_arr) JSONArray(src.json_arr);
+            }
         } break;
 
         case JSONObject::ValueType::NULL_TYPE:
@@ -423,9 +471,12 @@ void JSONObject::JSONValue::AssignValueByType(const JSONValue& src)
         {
             type = ValueType::NULL_TYPE;
         } break;
+
+        default:
+            type = ValueType::BAD_TYPE;
+            break;
     }
 }
-
 
 JSONObject::JSONValue::~JSONValue()
 {
@@ -437,10 +488,14 @@ JSONObject::JSONValue::~JSONValue()
  *  JSONObject
  * 
  **************************************************************************************************/
-
-JSONObject::JSONObject(const JSONObject& other) : insertion_order(other.insertion_order)
+JSONObject::JSONObject(const JSONObject& other)
 {
-    DeepCopyFrom(other);
+    DeepCopyFrom(other, nullptr, nullptr);
+}
+
+JSONObject::JSONObject(const JSONObject& other, const char *old_base, const char *new_base)
+{
+    DeepCopyFrom(other, old_base, new_base);
 }
 
 JSONObject& JSONObject::operator=(const JSONObject& other)
@@ -451,10 +506,9 @@ JSONObject& JSONObject::operator=(const JSONObject& other)
     }
     
     DeleteAllJson();
-    DeepCopyFrom(other);
+    insertion_order.clear();
+    DeepCopyFrom(other, nullptr, nullptr);
    
-    insertion_order = other.insertion_order;
-
     return *this;
 }
 
@@ -464,12 +518,37 @@ JSONObject::~JSONObject()
     insertion_order.clear();
 }
 
-void JSONObject::DeepCopyFrom(const JSONObject& other)
+void JSONObject::DeepCopyFrom(const JSONObject& other, const char *_old_base, const char *_new_base)
 {
-    for (auto& pair : other.json)
+    if (other.source_buffer.size() != 0)
     {
-        JSONValue *copy_value = new JSONValue(*(pair.second));
-        json.insert({pair.first, copy_value});
+        source_buffer = other.source_buffer;
+    }
+
+    const char *old_base;
+    const char *new_base;
+    if (_old_base && _new_base)
+    {
+        old_base = _old_base;
+        new_base = _new_base;
+    }
+    else
+    {
+        old_base = other.source_buffer.data();
+        new_base = source_buffer.data();
+    }
+
+    for (auto& [key, val] : other.json)
+    {
+        std::string_view new_key(new_base + (key.data() - old_base), key.size());
+        JSONValue *copy = new JSONValue(*(val), old_base, new_base);
+        json.insert({new_key, copy});
+    }
+
+    for (auto& key : other.insertion_order)
+    {
+        std::string_view new_key(new_base + (key.data() - old_base), key.size());
+        insertion_order.push_back(new_key);
     }
 }
 
@@ -507,50 +586,72 @@ void JSONObject::Remove(std::string_view key)
     insertion_order.remove(key);
 }
 
-void JSONObject::Parse(std::ifstream& json_file)
-{
-
-}
-
 static void SkipWhitespace(const std::string& buf, u32& pos)
 {
-    while (std::isspace(buf[pos])) 
+    while (CHECK_BUF(buf, pos, (std::isspace(buf[pos])))) 
     {
         ++pos;
     }
 }
 
-// {"num": 42, "name": "oron", "double": 42.42}
-
-// {
-//   "pairs":
-//     [{"x0":-24.136337,"y0":75.754684,"x1":-127.218956,"y1":-25.416527},
-//      {"x0":25.535736,"y0":-43.788517,"x1":-67.682999,"y1":82.133118},
-//      {"x0":-108.825356,"y0":-80.391953,"x1":93.193268,"y1":-5.138481},
-//      {"x0":150.926361,"y0":63.822083,"x1":-58.930611,"y1":72.343033}]
-// }
-void JSONObject::Parse(const std::string& json_str)
+/**
+ * @brief skips optional comma and surrounding whitespace between JSON elements
+ * If buf[pos] is a comma (after whitespace), advances past it and trailing whitespace.
+ * No-op if there is no comma (normal for the last element before ] or }).
+ */
+static void SkipComma(const std::string& buf, u32& pos)
 {
-    source_buffer = json_str;
-
-    u32 pos = 0;
-    SkipWhitespace(source_buffer, pos);
-    if (source_buffer[pos] == '{')
+    SkipWhitespace(buf, pos);
+    if (CHECK_BUF(buf, pos, (buf[pos] == ','))) 
     {
-        ++pos; // skip opening {
-        ParseObj(source_buffer, pos, *this);
+        ++pos;
+        SkipWhitespace(buf, pos);
     }
 }
 
-// TODO: add doc
-static void ParseObj(const std::string& buf, u32& pos, JSONObject& obj)
+/**
+ * @brief parses a JSON string value from buf starting at pos (past the opening ")
+ * Scans until the closing " and returns a string_view into buf.
+ * Advances pos past the closing ".
+ */
+static std::string_view ParseStr(const std::string& buf, u32& pos)
 {
-    while (buf[pos] != '}')
+    u32 start = pos;
+    while (CHECK_BUF(buf, pos, (buf[pos] != '"'))) ++pos;
+
+    std::string_view key(&buf[start], pos - start);
+
+    if (CHECK_BUF(buf, pos, (buf[pos] == '"')))
+    {
+        ++pos; // skip closing "
+        return key;
+    }
+    else
+    {
+        return std::string_view();
+    }
+}
+
+static JSONValue *ParseVal(const std::string& buf, u32& pos);
+
+/**
+ * @brief parses the body of a JSON object (after the opening {)
+ * Reads key-value pairs and inserts them into obj.
+ * Advances pos past the closing }.
+ * @return nullptr on success, or a BAD_TYPE JSONValue* on parse error.
+ */
+static JSONValue *ParseObj(const std::string& buf, u32& pos, JSONObject& obj)
+{
+    while (CHECK_BUF(buf, pos, (buf[pos] != '}')))
     {
         SkipWhitespace(buf, pos);
         
         ++pos; // skip opening "
         std::string_view key = ParseStr(buf, pos);
+        if (key.data() == nullptr)
+        {
+            return new JSONValue(JSONObject::ValueType::BAD_TYPE);
+        }
 
         SkipWhitespace(buf, pos);
         ++pos; // skip :
@@ -559,66 +660,180 @@ static void ParseObj(const std::string& buf, u32& pos, JSONObject& obj)
         JSONValue *val = ParseVal(buf, pos);
         if (val->type == JSONObject::ValueType::BAD_TYPE)
         {
-            // TODO: handle error
+            return val;
         }
 
         obj.json.insert({key, val});
         obj.insertion_order.push_back(key);
 
-        SkipWhitespace(buf, pos);
-        if (buf[pos] == ',') ++pos;
-        else // TODO: error
-        SkipWhitespace(buf, pos);
+        SkipComma(buf, pos);
     }
-    ++pos; // TODO: do i really need this???
+
+    if (CHECK_BUF(buf, pos, (buf[pos] == '}')))
+    {
+        ++pos; // skip }
+        return nullptr;
+    }
+    else
+    {
+        return new JSONValue(JSONObject::ValueType::BAD_TYPE);
+    }
 }
 
-// TODO: add doc
-static void ParseArr(const std::string& buf, u32& pos, JSONArray& arr)
+/**
+ * @brief parses the body of a JSON array (after the opening [)
+ * Reads values and pushes them into arr.
+ * Advances pos past the closing ].
+ * @return nullptr on success, or a BAD_TYPE JSONValue* on parse error.
+ */
+static JSONValue *ParseArr(const std::string& buf, u32& pos, JSONArray& arr)
 {
-    while (buf[pos] != ']')
+    while (CHECK_BUF(buf, pos, (buf[pos] != ']')))
     {
         SkipWhitespace(buf, pos);
+        JSONValue *val = ParseVal(buf, pos);
+        if (val->type != JSONObject::ValueType::BAD_TYPE)
+        {
+            arr.PushBack(val);
+            SkipComma(buf, pos);
+        }
+        else
+        {
+            return val;
+        }
+    }
 
-        
+    if (CHECK_BUF(buf, pos, (buf[pos] == ']')))
+    {
+        ++pos; // skip ]
+        return nullptr;
+    }
+    else
+    {
+        return new JSONValue(JSONObject::ValueType::BAD_TYPE);
     }
 }
 
-// {"num": 42, "name": "oron", "double": -42.42}
+/**
+ * @brief parses a JSON number (integer or floating-point) from buf starting at pos
+ * Uses std::from_chars for zero-allocation conversion.
+ * Returns a JSONValue with INT or DOUBLE type. Advances pos past the number.
+ */
+static JSONValue *ParseNum(const std::string& buf, u32& pos)
+{
+    u32 start = pos;
+    
+    if (CHECK_BUF(buf, pos, (buf[pos] == '-'))) ++pos;
+    while (CHECK_BUF(buf, pos, (std::isdigit(buf[pos])))) ++pos;
 
-// {
-//   "pairs":
-//     [{"x0":-24.136337,"y0":75.754684,"x1":-127.218956,"y1":-25.416527},
-//      {"x0":25.535736,"y0":-43.788517,"x1":-67.682999,"y1":82.133118},
-//      {"x0":-108.825356,"y0":-80.391953,"x1":93.193268,"y1":-5.138481},
-//      {"x0":150.926361,"y0":63.822083,"x1":-58.930611,"y1":72.343033}]
-// }
-// TODO: add doc
+    b8 is_float = 0;
+    if (CHECK_BUF(buf, pos, (buf[pos] == '.')))
+    {
+        is_float = 1;
+        ++pos;
+        while (CHECK_BUF(buf, pos, (std::isdigit(buf[pos])))) ++pos;
+    }
+
+    if (is_float)
+    {
+        f64 new_float;
+        std::from_chars(&buf[start], &buf[pos], new_float);
+        return new JSONValue(new_float);
+    }
+    else 
+    {
+        s32 new_int;
+        std::from_chars(&buf[start], &buf[pos], new_int);
+        return new JSONValue(new_int);
+    }
+}
+
+/**
+ * @brief parses a JSON literal: true, false, or null
+ * Returns a JSONValue with BOOL type (true/false) or NULL_TYPE (null).
+ * Returns BAD_TYPE if the literal is unrecognized. Advances pos past the literal.
+ */
+static JSONValue *ParseTFN(const std::string& buf, u32& pos)
+{
+    u32 start = pos;
+    while (CHECK_BUF(buf, pos, (std::isalpha(buf[pos])))) ++pos;
+
+    std::string_view value(&buf[start], pos - start);
+
+    if (value == "null")
+    {
+        return new JSONValue();
+    }
+    else if (value == "false")
+    {
+        return new JSONValue((bool)false);
+    }
+    else if (value == "true")
+    {
+        return new JSONValue((bool)true);
+    }
+
+    return new JSONValue(JSONObject::ValueType::BAD_TYPE);
+}
+
+/**
+ * @brief parses a single JSON value starting at buf[pos]
+ * Dispatches to ParseObj, ParseArr, ParseStr, ParseNum, or ParseTFN
+ * based on the current character. Advances pos past the value.
+ * @return the parsed JSONValue*, or a BAD_TYPE JSONValue* on parse error.
+ */
 static JSONValue *ParseVal(const std::string& buf, u32& pos)
 {
+    if (pos >= buf.size())
+    {
+        return new JSONValue(JSONObject::ValueType::BAD_TYPE);
+    }
+
     switch (buf[pos])
     {
         case '{':
         {
             JSONObject *obj = new JSONObject();
             ++pos; // skip {
-            ParseObj(buf, pos, *obj);
-            return new JSONValue(obj);
+            JSONValue *val = ParseObj(buf, pos, *obj);
+            if (!val)
+            {
+                return new JSONValue(obj);
+            }
+            else if (val->type == JSONObject::ValueType::BAD_TYPE)
+            {
+                delete obj;
+                return val;
+            }
         } break;
 
         case '[':
         {
             JSONArray arr;
             ++pos; // skip [
-            ParseArr(buf, pos, arr); // TODO: implement this func
-            return new JSONValue(std::move(arr));
+            JSONValue *val = ParseArr(buf, pos, arr);
+            if (!val)
+            {
+                return new JSONValue(std::move(arr));
+            }
+            else if (val->type == JSONObject::ValueType::BAD_TYPE)
+            {
+                return val;
+            }
         } break;
 
         case '"':
         {
             ++pos; // skip "
             std::string_view val = ParseStr(buf, pos);
-            return new JSONValue(val);
+            if (val.data() == nullptr)
+            {
+                return new JSONValue(JSONObject::ValueType::BAD_TYPE);
+            }
+            else
+            {
+                return new JSONValue(val);
+            }
         } break;
 
         default:
@@ -638,72 +853,71 @@ static JSONValue *ParseVal(const std::string& buf, u32& pos)
         } break;
     }
 
-}
-
-// TODO: add doc
-static JSONValue *ParseNum(const std::string& buf, u32& pos)
-{
-    u32 start = pos;
-    
-    if (buf[pos] == '-') ++pos;
-    while (std::isdigit(buf[pos])) ++pos;
-
-    b8 is_float = 0;
-    if (buf[pos] == '.')
-    {
-        is_float = 1;
-        ++pos;
-        while (std::isdigit(buf[pos])) ++pos;
-    }
-
-    if (is_float)
-    {
-        f64 new_float;
-        std::from_chars(&buf[start], &buf[pos], new_float);
-        return new JSONValue(new_float);
-    }
-    else 
-    {
-        s32 new_int;
-        std::from_chars(&buf[start], &buf[pos], new_int);
-        return new JSONValue(new_int);
-    }
-}
-
-// TODO: add doc
-static JSONValue *ParseTFN(const std::string& buf, u32& pos)
-{
-    u32 start = pos;
-    while (std::isalpha(buf[pos])) ++pos;
-
-    std::string_view value(&buf[start], pos - start);
-
-    if (value == "null")
-    {
-        return new JSONValue();
-    }
-    else if (value == "false")
-    {
-        return new JSONValue((b8)0);
-    }
-    else if (value == "true")
-    {
-        return new JSONValue((b8)1);
-    }
-
     return new JSONValue(JSONObject::ValueType::BAD_TYPE);
 }
 
-// TODO: add doc
-static std::string_view ParseStr(const std::string& buf, u32& pos)
+/**
+ * @brief entry point for the single-pass parser
+ * Skips leading whitespace, expects an opening {, then delegates to ParseObj
+ * to populate obj with the parsed key-value pairs.
+ * @param buf the source buffer containing JSON text (owned by the root JSONObject)
+ * @param obj the JSONObject to populate with parsed data
+ * @return 0 on success, 1 if the input is not a valid JSON object or a parse
+ *         error occurred.
+ */
+static int ParseSourceBuf(std::string& buf, JSONObject& obj)
 {
-    u32 start = pos;
-    while (buf[pos] != '"') ++pos;
+    u32 pos = 0;
+    SkipWhitespace(buf, pos);
+    if (CHECK_BUF(buf, pos, (buf[pos] == '{')))
+    {
+        ++pos; // skip opening {
+        JSONValue *val = ParseObj(buf, pos, obj);
+        if (!val)
+        {
+            return 0;
+        }
+        else if (val->type == JSONObject::ValueType::BAD_TYPE)
+        {
+            delete val;
+            return 1;
+        }
+    }
+    return 1;
+}
 
-    std::string_view key(&buf[start], pos - start);
-    ++pos; // skip closing "
+int JSONObject::Parse(std::ifstream& json_file)
+{
+    if (!json_file.is_open())
+    {
+        return 1;
+    }
 
-    return key;
+    json_file.seekg(0, std::ios_base::end);
+    std::streampos file_end = json_file.tellg();
+    if (file_end == std::streampos(-1))
+    {
+        return 1;
+    }
+
+    json_file.seekg(0);
+    u64 file_size = static_cast<u64>(file_end);
+    source_buffer.resize(file_size);
+
+    json_file.read(&source_buffer[0], file_size);
+    if (json_file.fail())
+    {
+        return 1;
+    }
+
+    return ParseSourceBuf(source_buffer, *this);
+}
+
+int JSONObject::Parse(const std::string& json_str)
+{
+    source_buffer = json_str;
+
+    return ParseSourceBuf(source_buffer, *this);
 }
 
 JSONObject::JSONValue& JSONObject::operator[](std::string_view key)
