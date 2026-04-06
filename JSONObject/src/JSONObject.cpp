@@ -538,16 +538,25 @@ void JSONObject::DeepCopyFrom(const JSONObject& other, const char *_old_base, co
         new_base = source_buffer.data();
     }
 
-    for (auto& [key, val] : other.json)
-    {
-        std::string_view new_key(new_base + (key.data() - old_base), key.size());
-        JSONValue *copy = new JSONValue(*(val), old_base, new_base);
-        json.insert({new_key, copy});
-    }
-
+    auto insertion_key_iter = other.inserted_keys.begin();
     for (auto& key : other.insertion_order)
     {
-        std::string_view new_key(new_base + (key.data() - old_base), key.size());
+        bool in_source = ((key.data() >= old_base) &&
+                          (key.data() < old_base + other.source_buffer.size()));
+        std::string_view new_key;
+        if (in_source)
+        {
+            new_key = std::string_view(new_base + (key.data() - old_base), key.size());
+        }
+        else
+        {
+            inserted_keys.push_back(*insertion_key_iter);
+            new_key = inserted_keys.back();
+            ++insertion_key_iter;
+        }
+
+        JSONValue *copy = new JSONValue(*other.json.at(key), old_base, new_base);
+        json.insert({new_key, copy});
         insertion_order.push_back(new_key);
     }
 }
@@ -584,6 +593,17 @@ void JSONObject::Remove(std::string_view key)
     delete iter->second;
     json.erase(iter);
     insertion_order.remove(key);
+
+    bool in_source = ((key.data() >= source_buffer.data()) &&
+                      (key.data() < source_buffer.data() + source_buffer.size()));
+    if (!in_source)
+    {
+        auto iter = std::find(inserted_keys.begin(), inserted_keys.end(), key);
+        if (iter != inserted_keys.end())
+        {
+            inserted_keys.erase(iter);
+        }
+    }
 }
 
 static void SkipWhitespace(const std::string& buf, u32& pos)
