@@ -355,6 +355,7 @@ namespace JSORON
 
         std::unordered_map<std::string_view, JSONValue*> json;
         std::list<std::string_view> insertion_order;
+        std::list<std::string> inserted_keys; // holds keys that were inserted after parsing
         std::string source_buffer;
 
         void DeepCopyFrom(const JSONObject& other, const char *_old_base, const char *_new_base);

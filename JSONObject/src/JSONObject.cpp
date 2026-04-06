@@ -927,8 +927,10 @@ JSONObject::JSONValue& JSONObject::operator[](std::string_view key)
     }
     catch (const std::out_of_range& e) {
         JSONValue *new_val = new JSONValue();
-        json.insert({key, new_val});
-        insertion_order.push_back(key);
+        inserted_keys.push_back(std::string(key));
+        std::string_view new_key = inserted_keys.back();
+        json.insert({new_key, new_val});
+        insertion_order.push_back(new_key);
         return *new_val;
     }
 }
