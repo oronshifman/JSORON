@@ -38,7 +38,6 @@ JSONObject CreateJson()
 		JSONObject *json_obj = new JSONObject();
 		(*json_obj)["num"] = (s32)index;
 		json_arr.PushBack(json_obj);
-        delete json_obj;
 	}	
 	
     json["ArrayOfJsons"] = json_arr;
@@ -127,6 +126,44 @@ void TestJSONArrayIterator(Tester& tester)
     }
 }
 
+void TestRealJsonParseString(Tester& tester)
+{
+    JSONObject obj;
+    obj.Parse("{\"pairs\":[{\"x0\":-24.136337,\"y0\":75.754684,\"x1\":-127.218956,\"y1\":-25.416527}, {\"x0\":25.535736,\"y0\":-43.788517,\"x1\":-67.682999,\"y1\":82.133118}, {\"x0\":-108.825356,\"y0\":-80.391953,\"x1\":93.193268,\"y1\":-5.138481}, {\"x0\":150.926361,\"y0\":63.822083,\"x1\":-58.930611,\"y1\":72.343033}]}");
+
+    JSONArray pairs;
+    JSONObject elm1;
+    elm1["x0"] = -24.136337;
+    elm1["y0"] = 75.754684;
+    elm1["x1"] = -127.218956;
+    elm1["y1"] = -25.416527;
+    JSONObject elm2;
+    elm2["x0"] = 25.535736;
+    elm2["y0"] = -43.788517;
+    elm2["x1"] = -67.682999;
+    elm2["y1"] = 82.133118;
+    JSONObject elm3;
+    elm3["x0"] = -108.825356;
+    elm3["y0"] = -80.391953;
+    elm3["x1"] = 93.193268;
+    elm3["y1"] = -5.138481;
+    JSONObject elm4;
+    elm4["x0"] = 150.926361;
+    elm4["y0"] = 63.822083;
+    elm4["x1"] = -58.930611;
+    elm4["y1"] = 72.343033;
+
+    pairs.PushBack(elm1);
+    pairs.PushBack(elm2);
+    pairs.PushBack(elm3);
+    pairs.PushBack(elm4);
+
+    JSONObject expected;
+    expected["pairs"] = pairs;
+
+    tester.AssertEqual(obj, expected, "TestRealJson_Lex", __LINE__);
+}
+
 int main(int argc, char *argv[])
 {
     Profiler::BeginProfiling();
@@ -144,6 +181,8 @@ int main(int argc, char *argv[])
     TestJSONValueCasting(tester);
 
     TestJSONArrayIterator(tester);
+
+    TestRealJsonParseString(tester);
 
     tester.TestAll();
 
