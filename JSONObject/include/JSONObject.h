@@ -47,7 +47,7 @@ namespace JSORON
         public:
             JSONArray() : array() {}
             JSONArray(const JSONArray& other);
-            JSONArray(const JSONArray& other, const char *old_base, const char *new_base);
+            JSONArray(const JSONArray& other, const char *old_base, const char *new_base, size_t old_buf_size);
             JSONArray(JSONArray&& other) : array(std::move(other.array)) {}
             JSONArray& operator=(const JSONArray& other);
 
@@ -141,9 +141,9 @@ namespace JSORON
 
         private:
             template<typename T>
-            void PushBack(const T& value, const char *old_base, const char *new_base);
+            void PushBack(const T& value, const char *old_base, const char *new_base, size_t old_buf_size);
 
-            void DeepCopyFrom(const JSONArray& other, const char *old_base, const char *new_base);
+            void DeepCopyFrom(const JSONArray& other, const char *old_base, const char *new_base, size_t old_buf_size);
             void DeleteAll(void);
 
             ValueArray array;
@@ -168,7 +168,7 @@ namespace JSORON
 
             JSONValue() : type(ValueType::NULL_TYPE) {}
             JSONValue(const JSONValue& value);
-            JSONValue(const JSONValue& value, const char *old_base, const char *new_base);
+            JSONValue(const JSONValue& value, const char *old_base, const char *new_base, size_t old_buf_size);
             JSONValue& operator=(const JSONValue& other);
 
             template<typename T>
@@ -183,7 +183,7 @@ namespace JSORON
             JSONValue(const s32 value) : type(ValueType::INT), int_val(value) {}
             JSONValue(const f64 value) : type(ValueType::DOUBLE), double_val(value) {}
             JSONValue(std::string_view value) : type(ValueType::STR), str_val(value) {}
-            JSONValue(const char *value) : type(ValueType::STR), str_val(value) {}
+            JSONValue(const char *value) : type(ValueType::MUT_STR), mut_str_val(value) {}
             JSONValue(JSONObject* value) : type(ValueType::JSON_OBJECT), json_val(value) {}
             JSONValue(const JSONObject& value);
 
@@ -282,7 +282,7 @@ namespace JSORON
             JSONValue& operator[](const char *key);
             
             void PrintValueByType(u8 indent, std::ostream& out) const;
-            void AssignValueByType(const JSONValue& src, const char *old_base, const char *new_base);
+            void AssignValueByType(const JSONValue& src, const char *old_base, const char *new_base, size_t old_buf_size);
             void DestroyCurrentValue();
     
             friend bool operator==(const JSONObject& lhs, const JSONObject& rhs);
@@ -295,7 +295,7 @@ namespace JSORON
     public:
         JSONObject() : json(), insertion_order() {}
         JSONObject(const JSONObject& other);
-        JSONObject(const JSONObject& other, const char *old_base, const char *new_base);
+        JSONObject(const JSONObject& other, const char *old_base, const char *new_base, size_t old_buf_size);
         JSONObject& operator=(const JSONObject& obj);
         ~JSONObject();
     
@@ -358,7 +358,7 @@ namespace JSORON
         std::list<std::string> inserted_keys; // holds keys that were inserted after parsing
         std::string source_buffer;
 
-        void DeepCopyFrom(const JSONObject& other, const char *_old_base, const char *_new_base);
+        void DeepCopyFrom(const JSONObject& other, const char *_old_base, const char *_new_base, size_t _old_buf_size);
         void DeleteAllJson(void);
 
         void RecPrint(u8 indent, std::ostream& out) const;
@@ -375,9 +375,9 @@ namespace JSORON
     }
 
     template<typename T>
-    void JSONObject::JSONArray::PushBack(const T& value, const char *old_base, const char *new_base)
+    void JSONObject::JSONArray::PushBack(const T& value, const char *old_base, const char *new_base, size_t old_buf_size)
     {
-        JSONValue *new_val = new JSONValue(value, old_base, new_base);
+        JSONValue *new_val = new JSONValue(value, old_base, new_base, old_buf_size);
         array.push_back(new_val);
     }
 

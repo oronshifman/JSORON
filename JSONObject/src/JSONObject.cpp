@@ -29,12 +29,12 @@ namespace JSORON
 
 JSONObject::JSONArray::JSONArray(const JSONObject::JSONArray& other)
 {
-    DeepCopyFrom(other, nullptr, nullptr);
+    DeepCopyFrom(other, nullptr, nullptr, 0);
 }
 
-JSONObject::JSONArray::JSONArray(const JSONObject::JSONArray& other, const char *old_base, const char *new_base)
+JSONObject::JSONArray::JSONArray(const JSONObject::JSONArray& other, const char *old_base, const char *new_base, size_t old_buf_size)
 {
-    DeepCopyFrom(other, old_base, new_base);
+    DeepCopyFrom(other, old_base, new_base, old_buf_size);
 }
 
 JSONObject::JSONArray& JSONObject::JSONArray::operator=(const JSONObject::JSONArray& other)
@@ -45,7 +45,7 @@ JSONObject::JSONArray& JSONObject::JSONArray::operator=(const JSONObject::JSONAr
     }
 
     DeleteAll();
-    DeepCopyFrom(other, nullptr, nullptr);
+    DeepCopyFrom(other, nullptr, nullptr, 0);
     return *this;
 }
 
@@ -133,14 +133,14 @@ void JSONObject::JSONArray::DeleteAll(void)
     array.clear();
 }
 
-void JSONObject::JSONArray::DeepCopyFrom(const JSONArray& other, const char *old_base, const char *new_base)
+void JSONObject::JSONArray::DeepCopyFrom(const JSONArray& other, const char *old_base, const char *new_base, size_t old_buf_size)
 {
     array.reserve(other.Size());
     if (old_base && new_base)
     {
         for (auto& val : other)
         {
-            PushBack(val, old_base, new_base);
+            PushBack(val, old_base, new_base, old_buf_size);
         }
     }
     else
@@ -159,12 +159,12 @@ void JSONObject::JSONArray::DeepCopyFrom(const JSONArray& other, const char *old
  **************************************************************************************************/
 JSONObject::JSONValue::JSONValue(const JSONValue& value)
 {
-    AssignValueByType(value, nullptr, nullptr);
+    AssignValueByType(value, nullptr, nullptr, 0);
 }
 
-JSONObject::JSONValue::JSONValue(const JSONValue& value, const char *old_base, const char *new_base)
+JSONObject::JSONValue::JSONValue(const JSONValue& value, const char *old_base, const char *new_base, size_t old_buf_size)
 {
-    AssignValueByType(value, old_base, new_base);
+    AssignValueByType(value, old_base, new_base, old_buf_size);
 }
 
 JSONObject::JSONValue::JSONValue(const JSONObject& value) : type(ValueType::JSON_OBJECT)
@@ -201,7 +201,19 @@ JSONObject::JSONValue::operator double&()
 
 JSONObject::JSONValue::operator std::string&()
 {
-    // TODO: implement
+    if (type == JSONObject::ValueType::STR)
+    {
+        std::string_view tmp = str_val;
+        new (&mut_str_val) std::string(tmp);
+        type = JSONObject::ValueType::MUT_STR;
+    }
+
+    if (type == JSONObject::ValueType::MUT_STR)
+    {
+        return mut_str_val;
+    }
+
+    throw std::bad_cast();
 }
 
 JSONObject::JSONValue::operator JSONObject&()
@@ -243,7 +255,8 @@ JSONObject::JSONValue::operator const double&() const
     if (type == JSONObject::ValueType::DOUBLE)
     {
         return double_val;
-    } else
+    }
+    else
     {
         throw std::bad_cast();
     }
@@ -255,10 +268,13 @@ JSONObject::JSONValue::operator std::string_view() const
     {
         return str_val;
     }
-    else
+
+    if (type == JSONObject::ValueType::MUT_STR)
     {
-        throw std::bad_cast();
+        return mut_str_val;
     }
+
+    throw std::bad_cast();
 }
 
 JSONObject::JSONValue::operator const JSONObject&() const
@@ -352,6 +368,11 @@ void JSONObject::JSONValue::PrintValueByType(u8 indent, std::ostream& out) const
             out << "\"" << str_val << "\"" << "\n";
         } break;
 
+        case JSONObject::ValueType::MUT_STR:
+        {
+            out << "\"" << mut_str_val << "\"" << "\n";
+        } break;
+
         case JSONObject::ValueType::JSON_OBJECT:
         {
             out << "{\n";
@@ -365,6 +386,10 @@ void JSONObject::JSONValue::PrintValueByType(u8 indent, std::ostream& out) const
         case JSONObject::ValueType::ARR:
         {
             out << "[";
+            if (json_arr.Size() == 0)
+            {
+                out << "]";
+            }
             for (u64 index = 0; index < json_arr.Size() ; ++index)
             {
                 out << json_arr.At(index) << 
@@ -391,6 +416,11 @@ void JSONObject::JSONValue::DestroyCurrentValue(void)
         {
             json_arr.~JSONArray();
         } break;
+
+        case JSONObject::ValueType::MUT_STR:
+        {
+            mut_str_val.~basic_string();
+        } break;
         
         case JSONObject::ValueType::STR:
         case JSONObject::ValueType::NULL_TYPE:
@@ -403,7 +433,7 @@ void JSONObject::JSONValue::DestroyCurrentValue(void)
     this->type = JSONObject::ValueType::NULL_TYPE;
 }
 
-void JSONObject::JSONValue::AssignValueByType(const JSONValue& src, const char *old_base, const char *new_base)
+void JSONObject::JSONValue::AssignValueByType(const JSONValue& src, const char *old_base, const char *new_base, size_t old_buf_size)
 {
     switch (src.type)
     {   
@@ -425,12 +455,18 @@ void JSONObject::JSONValue::AssignValueByType(const JSONValue& src, const char *
             double_val = src.double_val;
         } break;
 
+        case JSONObject::ValueType::MUT_STR:
+        {
+            new (&mut_str_val) std::string(src.mut_str_val);
+            type = ValueType::MUT_STR;
+        } break;
+
         case JSONObject::ValueType::STR:
         {
             type = ValueType::STR;
             if (old_base && new_base)
             {
-                str_val= std::string_view(
+                str_val = std::string_view(
                     new_base + (src.str_val.data() - old_base),
                     src.str_val.size());
             }
@@ -445,7 +481,7 @@ void JSONObject::JSONValue::AssignValueByType(const JSONValue& src, const char *
             type = ValueType::JSON_OBJECT;
             if (old_base && new_base)
             {
-                json_val = new JSONObject(*src.json_val, old_base, new_base);
+                json_val = new JSONObject(*src.json_val, old_base, new_base, old_buf_size);
             }
             else
             {
@@ -458,7 +494,7 @@ void JSONObject::JSONValue::AssignValueByType(const JSONValue& src, const char *
             type = ValueType::ARR;
             if (old_base && new_base)
             {
-                new (&json_arr) JSONArray(src.json_arr, old_base, new_base);
+                new (&json_arr) JSONArray(src.json_arr, old_base, new_base, old_buf_size);
             }
             else
             {
@@ -490,12 +526,12 @@ JSONObject::JSONValue::~JSONValue()
  **************************************************************************************************/
 JSONObject::JSONObject(const JSONObject& other)
 {
-    DeepCopyFrom(other, nullptr, nullptr);
+    DeepCopyFrom(other, nullptr, nullptr, 0);
 }
 
-JSONObject::JSONObject(const JSONObject& other, const char *old_base, const char *new_base)
+JSONObject::JSONObject(const JSONObject& other, const char *old_base, const char *new_base, size_t old_buf_size)
 {
-    DeepCopyFrom(other, old_base, new_base);
+    DeepCopyFrom(other, old_base, new_base, old_buf_size);
 }
 
 JSONObject& JSONObject::operator=(const JSONObject& other)
@@ -507,7 +543,8 @@ JSONObject& JSONObject::operator=(const JSONObject& other)
     
     DeleteAllJson();
     insertion_order.clear();
-    DeepCopyFrom(other, nullptr, nullptr);
+    inserted_keys.clear();
+    DeepCopyFrom(other, nullptr, nullptr, 0);
    
     return *this;
 }
@@ -518,7 +555,7 @@ JSONObject::~JSONObject()
     insertion_order.clear();
 }
 
-void JSONObject::DeepCopyFrom(const JSONObject& other, const char *_old_base, const char *_new_base)
+void JSONObject::DeepCopyFrom(const JSONObject& other, const char *_old_base, const char *_new_base, size_t _old_buf_size)
 {
     if (other.source_buffer.size() != 0)
     {
@@ -527,22 +564,25 @@ void JSONObject::DeepCopyFrom(const JSONObject& other, const char *_old_base, co
 
     const char *old_base;
     const char *new_base;
+    size_t old_buf_size;
     if (_old_base && _new_base)
     {
         old_base = _old_base;
         new_base = _new_base;
+        old_buf_size = _old_buf_size;
     }
     else
     {
         old_base = other.source_buffer.data();
         new_base = source_buffer.data();
+        old_buf_size = source_buffer.size();
     }
 
     auto insertion_key_iter = other.inserted_keys.begin();
     for (auto& key : other.insertion_order)
     {
         bool in_source = ((key.data() >= old_base) &&
-                          (key.data() < old_base + other.source_buffer.size()));
+                          (key.data() < old_base + old_buf_size));
         std::string_view new_key;
         if (in_source)
         {
@@ -555,7 +595,7 @@ void JSONObject::DeepCopyFrom(const JSONObject& other, const char *_old_base, co
             ++insertion_key_iter;
         }
 
-        JSONValue *copy = new JSONValue(*other.json.at(key), old_base, new_base);
+        JSONValue *copy = new JSONValue(*other.json.at(key), old_base, new_base, old_buf_size);
         json.insert({new_key, copy});
         insertion_order.push_back(new_key);
     }
@@ -1024,12 +1064,30 @@ bool operator==(const JSONObject::JSONValue& lhs, const JSONObject::JSONValue& r
 {
     if (&lhs == &rhs)
     {
-        return 1;
+        return true;
     }
 
     if (lhs.type != rhs.type)
     {
-        return 0;
+        switch (lhs.type)
+        {
+            case JSONObject::ValueType::STR:
+                if (rhs.type == JSONObject::ValueType::MUT_STR)
+                {
+                    return lhs.str_val == rhs.mut_str_val;
+                }
+                return false;
+
+            case JSONObject::ValueType::MUT_STR:
+                if (rhs.type == JSONObject::ValueType::STR)
+                {
+                    return lhs.mut_str_val == rhs.str_val;
+                }
+                return false;
+
+            default:
+                return false;
+        }
     }
 
     switch (lhs.type)
@@ -1046,30 +1104,26 @@ bool operator==(const JSONObject::JSONValue& lhs, const JSONObject::JSONValue& r
         case JSONObject::ValueType::STR:
             return lhs.str_val == rhs.str_val;
 
+        case JSONObject::ValueType::MUT_STR:
+            return lhs.mut_str_val == rhs.mut_str_val;
+
         case JSONObject::ValueType::JSON_OBJECT:
             return *(lhs.json_val) == *(rhs.json_val);
         
         case JSONObject::ValueType::ARR:
-        {
-            if (lhs.json_arr != rhs.json_arr)
-            {
-                return 0;
-            }
-        } break;
+            return lhs.json_arr == rhs.json_arr;
         
         default:
             if ((lhs.type == JSONObject::ValueType::NULL_TYPE) &&
                 (rhs.type == JSONObject::ValueType::NULL_TYPE))
             {
-                return 1;
+                return true;
             }
             else
             {
-                return 0;
+                return false;
             }
     }
-
-    return 1;
 }
 
 bool operator!=(const JSONObject::JSONValue& lhs, const JSONObject::JSONValue& rhs)
