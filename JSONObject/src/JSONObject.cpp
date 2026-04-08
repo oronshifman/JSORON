@@ -970,7 +970,8 @@ int JSONObject::Parse(std::ifstream& json_file)
         return 1;
     }
 
-    return ParseSourceBuf(source_buffer, *this);
+    int rc = ParseSourceBuf(source_buffer, *this);
+    return rc;
 }
 
 int JSONObject::Parse(const std::string& json_str)

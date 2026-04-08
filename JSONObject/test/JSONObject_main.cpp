@@ -126,11 +126,8 @@ void TestJSONArrayIterator(Tester& tester)
     }
 }
 
-void TestRealJsonParseString(Tester& tester)
+static JSONObject Create4PointJson(void)
 {
-    JSONObject obj;
-    obj.Parse("{\"pairs\":[{\"x0\":-24.136337,\"y0\":75.754684,\"x1\":-127.218956,\"y1\":-25.416527}, {\"x0\":25.535736,\"y0\":-43.788517,\"x1\":-67.682999,\"y1\":82.133118}, {\"x0\":-108.825356,\"y0\":-80.391953,\"x1\":93.193268,\"y1\":-5.138481}, {\"x0\":150.926361,\"y0\":63.822083,\"x1\":-58.930611,\"y1\":72.343033}]}");
-
     JSONArray pairs;
     JSONObject elm1;
     elm1["x0"] = -24.136337;
@@ -161,7 +158,51 @@ void TestRealJsonParseString(Tester& tester)
     JSONObject expected;
     expected["pairs"] = pairs;
 
+    return expected;
+}
+
+void TestRealJsonParseString(Tester& tester)
+{
+    JSONObject obj;
+    obj.Parse("{\"pairs\":[{\"x0\":-24.136337,\"y0\":75.754684,\"x1\":-127.218956,\"y1\":-25.416527}, {\"x0\":25.535736,\"y0\":-43.788517,\"x1\":-67.682999,\"y1\":82.133118}, {\"x0\":-108.825356,\"y0\":-80.391953,\"x1\":93.193268,\"y1\":-5.138481}, {\"x0\":150.926361,\"y0\":63.822083,\"x1\":-58.930611,\"y1\":72.343033}]}");
+
+    JSONObject expected = Create4PointJson();
+
     tester.AssertEqual(obj, expected, "TestRealJson_Lex", __LINE__);
+}
+
+void TestParseFile(Tester& tester)
+{
+    std::string file_path("../../haversine_jsons/4_points.json");
+    std::ifstream json_file(file_path);
+    if (json_file.good())
+    {
+        JSONObject from_file;
+        {
+            Profiler_TimeBlock("Parsing 4_points.json");
+            from_file.Parse(json_file);
+        }
+        JSONObject expected = Create4PointJson();
+        tester.AssertEqual(from_file, expected, "TestParseFromFile", __LINE__);
+
+        json_file.close();
+    }
+    else
+    {
+        std::cout << "file not found: " << file_path << "\n";
+    }
+
+    json_file.open("../../haversine_jsons/uniform_4320980_10000_points.json");
+    if (json_file.good())
+    {
+        JSONObject from_file;
+        {
+            Profiler_TimeBlock("Parsing uniform_4320980_10000_points.json");
+            from_file.Parse(json_file);
+        }
+        tester.AssertEqual("stress", "stress", "TestParseFromFile", __LINE__);
+        json_file.close();
+    }
 }
 
 int main(int argc, char *argv[])
@@ -183,6 +224,8 @@ int main(int argc, char *argv[])
     TestJSONArrayIterator(tester);
 
     TestRealJsonParseString(tester);
+
+    TestParseFile(tester);
 
     tester.TestAll();
 

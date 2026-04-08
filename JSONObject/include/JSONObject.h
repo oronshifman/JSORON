@@ -295,6 +295,12 @@ namespace JSORON
     public:
         JSONObject() : json(), insertion_order() {}
         JSONObject(const JSONObject& other);
+        JSONObject(JSONObject&& other) noexcept :
+            json(std::move(other.json)),
+            insertion_order(std::move(other.insertion_order)),
+            inserted_keys(std::move(other.inserted_keys)),
+            source_buffer(std::move(other.source_buffer))
+        {};
         JSONObject(const JSONObject& other, const char *old_base, const char *new_base, size_t old_buf_size);
         JSONObject& operator=(const JSONObject& obj);
         ~JSONObject();
