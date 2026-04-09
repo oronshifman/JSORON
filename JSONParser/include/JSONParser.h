@@ -76,6 +76,7 @@ namespace JSORON
         friend bool operator!=(const JSONParser& lhs, const JSONParser& rhs);
         friend std::ostream& operator<<(std::ostream& out, const Token& tok);
         friend std::ostream& operator<<(std::ostream& out, const TokenList& toks);
+
 #ifdef NDEBUG
     private:
 #endif /* NDEBUG */

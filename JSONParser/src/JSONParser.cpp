@@ -175,8 +175,8 @@ namespace JSORON
             JSONValue *key = _Parse();
             if (key->type == JSONObject::ValueType::KEY)
             {
-                ++curr_tok;
-                ++curr_tok;
+                ++curr_tok; // move curr_tok past the KEY
+                ++curr_tok; // move curr_tok past the ":"
 
                 JSONValue *val = _Parse();
                 if (val->type == JSONObject::ValueType::NULL_TYPE ||

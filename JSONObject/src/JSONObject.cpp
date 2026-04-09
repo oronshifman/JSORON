@@ -7,6 +7,7 @@
 #include <ostream>
 #include <string>
 #include <iostream>
+#include <algorithm>
 #include <assert.h>
 
 #include "JSONObject.h"
@@ -14,44 +15,6 @@
 
 namespace JSORON
 {
-    
-/**************************************************************************************************
- * 
- *  JSONArray::Iterator
- * 
- **************************************************************************************************/
-
-JSONObject::JSONValue& JSONObject::JSONArray::Iterator::operator*() const 
-{
-    return is_const ? **m_const_iter : **m_iter;
-}
-
-JSONObject::JSONArray::Iterator& JSONObject::JSONArray::Iterator::operator++() 
-{
-    is_const ? ++m_const_iter : ++m_iter;
-    
-    return *this;
-}
-
-JSONObject::JSONArray::Iterator JSONObject::JSONArray::Iterator::operator++(int) 
-{
-    Iterator temp = *this;
-    ++(*this);
-    return temp;
-}                
-
-bool JSONObject::JSONArray::Iterator::operator==(const Iterator& other) const 
-{ 
-    if (is_const != other.is_const) return 0;
-    bool comp_const = m_const_iter == other.m_const_iter;
-    bool comp = m_iter == other.m_iter;
-    return is_const ? m_const_iter == other.m_const_iter : m_iter == other.m_iter;
-}
-
-bool JSONObject::JSONArray::Iterator::operator!=(const Iterator& other) const 
-{ 
-    return !(*this == other);
-}
 
 /**************************************************************************************************
  * 
@@ -61,18 +24,23 @@ bool JSONObject::JSONArray::Iterator::operator!=(const Iterator& other) const
 
 JSONObject::JSONArray::JSONArray(const JSONObject::JSONArray& other)
 {
-    array.assign(other.array.begin(), other.array.end());
+    DeepCopyFrom(other);
 }
 
 JSONObject::JSONArray& JSONObject::JSONArray::operator=(const JSONObject::JSONArray& other)
 {
-    array.assign(other.array.begin(), other.array.end());
+    if (this == &other)
+    {
+        return *this;
+    }
+
+    DeleteAll();
     return *this;
 }
 
 JSONObject::JSONArray::~JSONArray()
 {
-    array.clear();
+    DeleteAll();
 }
 
 void JSONObject::JSONArray::PushBack(JSONValue *value)
@@ -80,12 +48,22 @@ void JSONObject::JSONArray::PushBack(JSONValue *value)
     array.push_back(value);
 }
 
-JSONObject::JSONValue JSONObject::JSONArray::Erase(u64 index)
+JSONObject::JSONArray::Iterator JSONObject::JSONArray::Erase(u64 index)
 {
     assert(index < array.size());
 
-    auto iter = array.erase(std::next(array.begin(), index));
-    return **iter;
+    auto iter = Erase(Iterator(std::next(array.begin(), index)));
+    return iter;
+}
+
+JSONObject::JSONArray::Iterator JSONObject::JSONArray::Erase(Iterator pos)
+{
+    assert(pos.m_iter < array.end());
+
+    delete *pos.m_iter;
+
+    auto iter = array.erase(pos.m_iter);
+    return Iterator(iter);
 }
 
 JSONObject::JSONValue& JSONObject::JSONArray::At(u64 index) const
@@ -100,14 +78,14 @@ u64 JSONObject::JSONArray::Size() const
     return array.size();
 }
 
-JSONObject::JSONArray::Iterator JSONObject::JSONArray::begin() const
+JSONObject::JSONArray::ConstIterator JSONObject::JSONArray::begin() const
 {
-    return Iterator(array.begin());
+    return ConstIterator(array.begin());
 }
 
-JSONObject::JSONArray::Iterator JSONObject::JSONArray::end() const
+JSONObject::JSONArray::ConstIterator JSONObject::JSONArray::end() const
 {
-    return Iterator(array.end());
+    return ConstIterator(array.end());
 }
 
 JSONObject::JSONArray::Iterator JSONObject::JSONArray::begin()
@@ -120,14 +98,29 @@ JSONObject::JSONArray::Iterator JSONObject::JSONArray::end()
     return Iterator(array.end());
 }
 
+void JSONObject::JSONArray::DeleteAll(void)
+{
+    for (auto *val : array)
+    {
+        delete val;
+    }
+    array.clear();
+}
+
+void JSONObject::JSONArray::DeepCopyFrom(const JSONArray& other)
+{
+    array.reserve(other.Size());
+    for (auto& val : other)
+    {
+        PushBack(val);
+    }
+}
+
 /**************************************************************************************************
  * 
  *  JSONValue
  * 
  **************************************************************************************************/
-
-const JSONObject::JSONValue JSONObject::bad_value(JSONObject::ValueType::BAD_TYPE);
-
 JSONObject::JSONValue::JSONValue(const JSONValue &value)
 {
     AssignValueByType(value);
@@ -150,16 +143,16 @@ JSONObject::JSONValue& JSONObject::JSONValue::operator=(const JSONValue& other)
         return *this;
     }
     
-    AssignValueByType(other);
+    DestroyCurrentValue();
+    new (this) JSONValue(other);
     return *this;
 }
 
-// NOTE(01.11.24): this functions casts away const!!!
-JSONObject::JSONValue::operator int&() const
+JSONObject::JSONValue::operator int&()
 {
     if (type == JSONObject::ValueType::INT)
     {
-        return const_cast<int&>(int_val);
+        return int_val;
     }
     else
     {
@@ -167,24 +160,22 @@ JSONObject::JSONValue::operator int&() const
     }
 }
 
-// NOTE(01.11.24): this functions casts away const!!!
-JSONObject::JSONValue::operator double&() const
+JSONObject::JSONValue::operator double&()
 {
     if (type == JSONObject::ValueType::DOUBLE)
     {
-        return const_cast<double&>(double_val);
+        return double_val;
     } else
     {
         throw std::bad_cast();
     }
 }
 
-// NOTE(01.11.24): this functions casts away const!!!
-JSONObject::JSONValue::operator std::string&() const
+JSONObject::JSONValue::operator std::string&()
 {
     if (type == JSONObject::ValueType::STR)
     {
-        return const_cast<std::string&>(str_val);
+        return str_val;
     }
     else
     {
@@ -192,12 +183,11 @@ JSONObject::JSONValue::operator std::string&() const
     }
 }
 
-// NOTE(01.11.24): this functions casts away const!!!
-JSONObject::JSONValue::operator JSONObject&() const
+JSONObject::JSONValue::operator JSONObject&()
 {
     if (type == JSONObject::ValueType::JSON_OBJECT)
     {
-        return const_cast<JSONObject&>(*json_val);
+        return *json_val;
     }
     else
     {
@@ -205,12 +195,70 @@ JSONObject::JSONValue::operator JSONObject&() const
     }
 }
 
-// NOTE(01.11.24): this functions casts away const!!!
-JSONObject::JSONValue::operator JSONArray&() const
+JSONObject::JSONValue::operator JSONArray&()
 {
     if (type == JSONObject::ValueType::ARR)
     {
-        return const_cast<JSONArray&>(json_arr);
+        return json_arr;
+    }
+    else
+    {
+        throw std::bad_cast();
+    }
+}
+
+JSONObject::JSONValue::operator const int&() const
+{
+    if (type == JSONObject::ValueType::INT)
+    {
+        return int_val;
+    }
+    else
+    {
+        throw std::bad_cast();
+    }
+}
+
+JSONObject::JSONValue::operator const double&() const
+{
+    if (type == JSONObject::ValueType::DOUBLE)
+    {
+        return double_val;
+    } else
+    {
+        throw std::bad_cast();
+    }
+}
+
+JSONObject::JSONValue::operator const std::string&() const
+{
+    if (type == JSONObject::ValueType::STR)
+    {
+        return str_val;
+    }
+    else
+    {
+        throw std::bad_cast();
+    }
+}
+
+JSONObject::JSONValue::operator const JSONObject&() const
+{
+    if (type == JSONObject::ValueType::JSON_OBJECT)
+    {
+        return *json_val;
+    }
+    else
+    {
+        throw std::bad_cast();
+    }
+}
+
+JSONObject::JSONValue::operator const JSONArray&() const
+{
+    if (type == JSONObject::ValueType::ARR)
+    {
+        return json_arr;
     }
     else
     {
@@ -222,45 +270,21 @@ JSONObject::JSONValue JSONObject::JSONValue::operator[](u64 index)
 {
     switch (type)
     {
-        case JSONObject::ValueType::BAD_TYPE:
-        case JSONObject::ValueType::NULL_TYPE:
-        case JSONObject::ValueType::INT:
-        case JSONObject::ValueType::DOUBLE:
-        case JSONObject::ValueType::STR:
-        case JSONObject::ValueType::JSON_OBJECT:
-        {
-            return *this;
-        } break; 
-
         case JSONObject::ValueType::ARR:
-        {
             return json_arr.At(index);
-        } break;
+
+        default:
+            return *this;
     }
 }
 
 JSONObject::JSONValue& JSONObject::JSONValue::operator[](std::string key)
 {
-    const JSONValue& val = static_cast<const JSONValue&>(*this)[key];
-    return const_cast<JSONValue&>(val);
-}
-
-const JSONObject::JSONValue& JSONObject::JSONValue::operator[](std::string key) const
-{
-    if (type == JSONObject::ValueType::JSON_OBJECT)
-    {
-        return (*json_val)[key];
-    }
-
-    return JSONObject::bad_value;
+    assert(type == JSONObject::ValueType::JSON_OBJECT);
+    return json_val->operator[](key);
 }
 
 JSONObject::JSONValue& JSONObject::JSONValue::operator[](const char* key)
-{
-    return (*this)[std::string(key)];
-}
-
-const JSONObject::JSONValue& JSONObject::JSONValue::operator[](const char* key) const
 {
     return (*this)[std::string(key)];
 }
@@ -269,11 +293,6 @@ void JSONObject::JSONValue::PrintValueByType(u8 indent, std::ostream& out) const
 {
         switch (type)
         {
-            case JSONObject::ValueType::BAD_TYPE:
-            case JSONObject::ValueType::NULL_TYPE:
-            {
-            } break;
-
             case JSONObject::ValueType::INT:
             {
                 out << int_val << "\n";
@@ -307,10 +326,41 @@ void JSONObject::JSONValue::PrintValueByType(u8 indent, std::ostream& out) const
                 out << "\n";
             } break;
 
+            case JSONObject::ValueType::KEY:
+            case JSONObject::ValueType::NULL_TYPE:
             case JSONObject::ValueType::NUM_JSON_TYPES:
-            {
-            } break;
+                break;
         }
+}
+
+void JSONObject::JSONValue::DestroyCurrentValue(void)
+{
+    switch (this->type)
+    {   
+        case JSONObject::ValueType::STR:
+        case JSONObject::ValueType::KEY:
+        {
+            str_val.~basic_string();
+        } break;
+
+        case JSONObject::ValueType::JSON_OBJECT:
+        {
+            delete this->json_val;
+        } break;
+
+        case JSONObject::ValueType::ARR:
+        {
+            json_arr.~JSONArray();
+        } break;
+        
+        case JSONObject::ValueType::NULL_TYPE:
+        case JSONObject::ValueType::INT:
+        case JSONObject::ValueType::DOUBLE:
+        default:
+            break;
+    }
+
+    this->type = JSONObject::ValueType::NULL_TYPE;
 }
 
 void JSONObject::JSONValue::AssignValueByType(const JSONValue& src)
@@ -335,6 +385,12 @@ void JSONObject::JSONValue::AssignValueByType(const JSONValue& src)
             new (&str_val) std::string(src.str_val);
         } break;
 
+        case JSONObject::ValueType::KEY:
+        {
+            type = ValueType::KEY;
+            new (&str_val) std::string(src.str_val);
+        } break;
+
         case JSONObject::ValueType::JSON_OBJECT:
         {
             type = ValueType::JSON_OBJECT;
@@ -352,45 +408,13 @@ void JSONObject::JSONValue::AssignValueByType(const JSONValue& src)
         {
             type = ValueType::NULL_TYPE;
         } break;
-        
-        case JSONObject::ValueType::BAD_TYPE:
-        {
-        } break;
     }
 }
 
 
 JSONObject::JSONValue::~JSONValue()
 {
-    switch (type)
-    {
-        case ValueType::NULL_TYPE:
-        case ValueType::INT:
-        case ValueType::DOUBLE:
-        case ValueType::NUM_JSON_TYPES:
-        {
-            type = ValueType::NULL_TYPE;
-        } break;
-
-        case ValueType::STR:
-        {
-            str_val.~basic_string();
-        } break;
-        
-        case ValueType::JSON_OBJECT:
-        {
-            delete json_val;
-        } break;
-
-        case ValueType::ARR:
-        {
-            json_arr.~JSONArray();
-        } break;
-
-        case JSONObject::ValueType::BAD_TYPE:
-        {
-        } break;
-    }
+    DestroyCurrentValue();
 }
 
 /**************************************************************************************************
@@ -401,11 +425,7 @@ JSONObject::JSONValue::~JSONValue()
 
 JSONObject::JSONObject(const JSONObject& other) : insertion_order(other.insertion_order)
 {
-    for (auto& pair : other.json)
-    {
-        JSONValue *copy_value = new JSONValue(*(pair.second));
-        json.insert({pair.first, copy_value});
-    }
+    DeepCopyFrom(other);
 }
 
 JSONObject& JSONObject::operator=(const JSONObject& other)
@@ -415,60 +435,74 @@ JSONObject& JSONObject::operator=(const JSONObject& other)
         return *this;
     }
     
-    json.clear();
-    json.insert(other.json.begin(), other.json.end());
+    DeleteAllJson();
+    DeepCopyFrom(other);
    
-    insertion_order.assign(other.insertion_order.begin(), other.insertion_order.end());
+    insertion_order = other.insertion_order;
 
     return *this;
 }
 
 JSONObject::~JSONObject()
 {
-    // Profiler_TimeFunction; // NOTE(28.10.24): PROFILING
+    DeleteAllJson();
+    insertion_order.clear();
+}
 
+void JSONObject::DeepCopyFrom(const JSONObject& other)
+{
+    for (auto& pair : other.json)
+    {
+        JSONValue *copy_value = new JSONValue(*(pair.second));
+        json.insert({pair.first, copy_value});
+    }
+}
+
+void JSONObject::DeleteAllJson(void)
+{
     for (auto& pair : json)
     {
         delete pair.second;
     }
     json.clear();
-    insertion_order.clear();
 }
 
-void JSONObject::Put(const std::string key, JSONValue *value)
+JSONObject::JSONValue& JSONObject::At(const std::string& key)
 {
-    auto res = json.insert({key, value});
-    if (res.second)
+    return const_cast<JSONValue&>(static_cast<const JSONObject&>(*this).At(key));
+}
+
+const JSONObject::JSONValue& JSONObject::At(const std::string& key) const
+{
+    auto value = json.find(key);
+    if (value == json.end())
     {
-        insertion_order.push_back(key);
+        throw std::out_of_range("Key not found: " + key);
     }
+    return *(value->second);
 }
-
-JSONObject& JSONObject::AddObj(const std::string &key)
-{
-    JSONObject *new_obj = new JSONObject();
-    return *new_obj;
-}   
 
 void JSONObject::Remove(std::string key)
 {
-    // TODO(28.07.24): impl
+    auto iter = json.find(key);
+    if (iter == json.end()) return;
+
+    delete iter->second;
+    json.erase(iter);
+    insertion_order.remove(key);
 }
 
 JSONObject::JSONValue& JSONObject::operator[](std::string key)
 {
-    return const_cast<JSONValue&>(static_cast<const JSONObject&>(*this)[key]);
-}
-
-const JSONObject::JSONValue& JSONObject::operator[](std::string key) const
-{
-    
-    auto value = json.find(key);
-    if (value == json.end())
-    {
-        return bad_value;
+    try {
+        return this->At(key);
     }
-    return *(value->second);
+    catch (const std::out_of_range& e) {
+        JSONValue *new_val = new JSONValue();
+        json.insert({key, new_val});
+        insertion_order.push_back(key);
+        return *new_val;
+    }
 }
 
 bool operator==(const JSONObject::JSONArray& lhs, const JSONObject::JSONArray& rhs)
@@ -477,12 +511,15 @@ bool operator==(const JSONObject::JSONArray& lhs, const JSONObject::JSONArray& r
     {
         return 1;
     }
-    
-    for (JSONArray::Iterator lhs_iter = lhs.begin(), rhs_iter = rhs.begin();
-         lhs_iter != lhs.end() && rhs_iter != rhs.end();
-         ++lhs_iter, ++rhs_iter)
+
+    if (lhs.Size() != rhs.Size())
     {
-        if (*lhs_iter != *rhs_iter)
+        return 0;
+    }
+   
+    for (u64 i = 0; i < lhs.Size(); ++i)
+    {
+        if (lhs.At(i) != rhs.At(i))
         {
             return 0;
         }
@@ -547,31 +584,20 @@ bool operator==(const JSONObject::JSONValue& lhs, const JSONObject::JSONValue& r
 
     switch (lhs.type)
     {
-        case JSONObject::ValueType::BAD_TYPE:
         case JSONObject::ValueType::NULL_TYPE:
-        {
             return 1;
-        } break;
 
         case JSONObject::ValueType::INT:
-        {
             return lhs.int_val == rhs.int_val;
-        } break;
         
         case JSONObject::ValueType::DOUBLE:
-        {
             return lhs.double_val == rhs.double_val;
-        } break;
         
         case JSONObject::ValueType::STR:
-        {
             return lhs.str_val == rhs.str_val;
-        } break;
 
         case JSONObject::ValueType::JSON_OBJECT:
-        {
             return *(lhs.json_val) == *(rhs.json_val);
-        } break;
         
         case JSONObject::ValueType::ARR:
         {
@@ -582,10 +608,8 @@ bool operator==(const JSONObject::JSONValue& lhs, const JSONObject::JSONValue& r
         } break;
         
         default:
-        {
              // TODO(16.8.24): SyntaxError() type not supported
              return 0;
-        } break;
     }
 
     return 1;

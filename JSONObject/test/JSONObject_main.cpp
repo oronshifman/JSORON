@@ -1,11 +1,12 @@
 /* ------------------------------------------*/ 
-/* Filename: JSONObject_main.cpp           */
+/* Filename: JSONObject_main.cpp             */
 /* Date:     23.07.2024                      */
 /* Author:   Oron                            */ 
 /* ------------------------------------------*/
 
 #include "JSONObject.h"
 #include "generic_test.h"
+#include "profiler.h"
 
 using namespace JSORON;
 
@@ -15,32 +16,32 @@ JSONObject CreateJson()
 
 	JSONObject json;
 
-    json.Put("intKey", 13);
-	json.Put("doubleKey", 13.3f);
-	json.Put("strKey", "str");
+    json["intKey"] = 13;
+	json["doubleKey"] = 13.3f;
+	json["strKey"] = "str";
 
 	JSONObject nested_json;
-	nested_json.Put("nestedInt", 42);
+	nested_json["nestedInt"] = 42;
 
     JSONArray nested_int_arr;
     nested_int_arr.PushBack(1);
     nested_int_arr.PushBack(2);
     nested_int_arr.PushBack(3);
-	nested_json.Put("nestedIntArr", nested_int_arr);
+	nested_json["nestedIntArr"] = nested_int_arr;
 
-	json.Put("nestedJson", nested_json);
+	json["nestedJson"] = nested_json;
 
 	u64 num_obj = 5;
 	JSONArray json_arr;
 	for (u64 index = 0; index < num_obj; ++index)
 	{
 		JSONObject *json_obj = new JSONObject();
-		json_obj->Put("num", (s32)index);
+		(*json_obj)["num"] = (s32)index;
 		json_arr.PushBack(json_obj);
         delete json_obj;
 	}	
 	
-    json.Put("ArrayOfJsons", json_arr);
+    json["ArrayOfJsons"] = json_arr;
 
     return json;
 }
@@ -143,6 +144,8 @@ void TestPutJSONObject(Tester& tester)
 
 int main(int argc, char *argv[])
 {
+    Profiler::BeginProfiling();
+
 	Tester tester;
     
     TestOperatorSquareBrackets(tester);
@@ -152,7 +155,7 @@ int main(int argc, char *argv[])
     TestObjectCopyAssignment(tester);
 
     TestJSONValueCopyAssignment(tester);
-    
+
     TestJSONValueCasting(tester);
 
     TestJSONArrayIterator(tester);
@@ -161,23 +164,7 @@ int main(int argc, char *argv[])
 
     tester.TestAll();
 
+    Profiler::EndProfilingAndPrint();
+
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
