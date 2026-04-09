@@ -4,8 +4,11 @@
 /* Author:   Oron                            */ 
 /* ------------------------------------------*/
 
+#include <fstream>
+
 #include "JSONObject.h"
 #include "generic_test.h"
+
 #include "profiler.h"
 
 using namespace JSORON;
@@ -173,7 +176,7 @@ void TestRealJsonParseString(Tester& tester)
 
 void TestParseFile(Tester& tester)
 {
-    std::string file_path("../../haversine_jsons/4_points.json");
+    std::string file_path("../haversine_jsons/4_points.json");
     std::ifstream json_file(file_path);
     if (json_file.good())
     {

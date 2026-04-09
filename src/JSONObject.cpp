@@ -8,13 +8,12 @@
 #include <string>
 #include <cstring>
 #include <fstream>
-#include <iostream>
 #include <algorithm>
 #include <charconv>
-#include <assert.h>
+#include <cassert>
 
 #include "JSONObject.h"
-#include "profiler.h"
+#include "JSORONdef.h"
 
 #define CHECK_BUF(buf, pos, cond) ((pos) < (buf).size()) && (cond)
 

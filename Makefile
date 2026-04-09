@@ -1,8 +1,8 @@
 TARGET = JSONObject
 
-OBJS = src/JSONObject.o test/JSONObject_main.o ../../profiler/src/profiler.o
+OBJS = src/JSONObject.o test/JSONObject_main.o ../profiler/src/profiler.o
 
-TEST=../../utils/generic_test.o
+TEST=../utils/generic_test.o
 
 RELEASE_BIN = build/$(TARGET)_release
 DEBUG_BIN = build/$(TARGET)_debug
@@ -12,7 +12,7 @@ CXX=g++
 
 CXXFLAGS=-Wall -std=c++20
 
-CPPFLAGS=-Iinclude -I../../utils -I../../profiler/include -I../JSONParser/include
+CPPFLAGS=-Iinclude -I../utils -I../profiler/include
 
 RELEASE_FLAGS=-DNDEBUG -O3
 DEBUG_FLAG=-g3
